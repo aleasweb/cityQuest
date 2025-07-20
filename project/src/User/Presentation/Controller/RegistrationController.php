@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Security;
+namespace App\User\Presentation\Controller;
 
 use App\User\Domain\Entity\User;
 use App\User\Infrastructure\Db\UserRepository;
@@ -24,6 +24,9 @@ class RegistrationController extends AbstractController
             // Проверка на уникальность email
             if ($userRepository->findBy(['email' => $email])) {
                 $this->addFlash('error', 'Email уже используется');
+            // Проверка на уникальность username
+            } else if ($userRepository->findBy(['username' => $username])) {
+                $this->addFlash('error', 'username уже используется');
             } else {
                 $user = new User();
                 $user->setEmail($email);
