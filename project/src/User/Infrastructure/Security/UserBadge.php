@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Security;
+namespace App\User\Infrastructure\Security;
 
 use Symfony\Component\Security\Http\Authenticator\Passport\Badge\UserBadge as SymfonyUserBadge;
 
