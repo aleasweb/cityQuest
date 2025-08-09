@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+}
+
+@keyframes scroll {
+  0% { transform: translateX(0); }
+  50% { transform: translateX(calc(-100% + 120px)); }
+  100% { transform: translateX(0); }
+}
+
+.animate-scroll {
+  animation: scroll linear infinite;
+}
+
+@keyframes triangle-bounce {
+  0%, 100% { transform: translateY(-50%) scale(1); }
+  50% { transform: translateY(-50%) scale(1.2); }
+}
+
+.animate-triangle {
+  animation: triangle-bounce 1s ease-in-out infinite;
+}
