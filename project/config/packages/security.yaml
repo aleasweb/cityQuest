@@ -18,12 +18,11 @@ security:
             form_login:
                 login_path: login
                 check_path: login
+                username_parameter: email
+                password_parameter: password
             logout:
                 path: logout
                 target: /
 
     access_control:
-        - { path: ^/health-check, roles: PUBLIC_ACCESS  }
-        - { path: ^/login, roles: PUBLIC_ACCESS }
-        - { path: ^/register, roles: PUBLIC_ACCESS }
-        - { path: ^/, roles: ROLE_USER } 
+        - { path: ^/, roles: PUBLIC_ACCESS } 
