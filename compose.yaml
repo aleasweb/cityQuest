@@ -43,6 +43,7 @@ services:
       - ${POSTGRES_PORT:-5432}:5432
     volumes:
       - ./data/postgres-${POSTGRES_VERSION:-16}:/var/lib/postgresql/data:rw
+      - ./data/init-db:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-username} -d ${POSTGRES_DB:-database}"]
       interval: 10s
@@ -55,8 +56,8 @@ services:
     ports:
       - ${PGADMIN_PORT:-8888}:80
     environment:
-      PGADMIN_DEFAULT_EMAIL: username@example.com
-      PGADMIN_DEFAULT_PASSWORD: password
+      PGADMIN_DEFAULT_EMAIL: pgadmin@cityquest.com
+      PGADMIN_DEFAULT_PASSWORD: pgadmin
       VIRTUAL_HOST: ${PGADMIN_VIRTUAL_HOST:-pgadmin.test}
     volumes:
       - pgadmin-data:/var/lib/pgadmin
