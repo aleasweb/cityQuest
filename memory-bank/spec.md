@@ -20,58 +20,42 @@
 ### **2.2. Структура базы данных**
 
 #### **Основные таблицы:**
-1. **`quests`** - квесты
+1. **`users`** - пользователи
    ```sql
-   id UUID PRIMARY KEY,
-   title VARCHAR(100) NOT NULL,
-   description TEXT,
-   cover_image VARCHAR(255),
-   city VARCHAR(50) NOT NULL,
-   difficulty ENUM('easy','medium','hard') NOT NULL,
-   estimated_time INT,
-   likes_count INT DEFAULT 0,
-   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-   updated_at TIMESTAMP
-   ```
-
-2. **`quest_steps`** - этапы квестов
-   ```sql
-   id UUID PRIMARY KEY,
-   quest_id UUID REFERENCES quests(id),
-   title VARCHAR(100) NOT NULL,
-   description TEXT,
-   latitude DECIMAL(10,8) NOT NULL,
-   longitude DECIMAL(11,8) NOT NULL,
-   image VARCHAR(255),
-   audio_clue VARCHAR(255),
-   step_order INT NOT NULL
-   ```
-
-3. **`users`** - пользователи
-   ```sql
-   id UUID PRIMARY KEY,
-   email VARCHAR(180) UNIQUE NOT NULL,
+   id SERIAL PRIMARY KEY,
+   email VARCHAR(255) NOT NULL,
    password VARCHAR(255) NOT NULL,
-   roles JSON NOT NULL,
-   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+   username VARCHAR(100)
    ```
 
-4. **`user_quest_progress`** - прогресс пользователей
+2. **`quests`** - квесты
    ```sql
-   id UUID PRIMARY KEY,
-   user_id UUID REFERENCES users(id),
-   quest_id UUID REFERENCES quests(id),
-   current_step_id UUID REFERENCES quest_steps(id),
-   is_completed BOOLEAN DEFAULT false,
+   id INTEGER PRIMARY KEY AUTOINCREMENT,
+   title TEXT NOT NULL,
+   description TEXT,
+   city TEXT,
+   difficulty TEXT,
+   duration_minutes INTEGER,
+   distance_km REAL,
+   image_url TEXT,
+   author TEXT,
+   likes_count INTEGER DEFAULT 0,
+   is_popular BOOLEAN DEFAULT FALSE,
+   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
    ```
 
-5. **`quest_likes`** - лайки квестов
+3. **`user_quest_progress`** - прогресс пользователей
    ```sql
-   user_id UUID REFERENCES users(id),
-   quest_id UUID REFERENCES quests(id),
+   id INTEGER PRIMARY KEY AUTOINCREMENT,
+   user_id TEXT NOT NULL,
+   quest_id INTEGER NOT NULL,
+   is_completed BOOLEAN DEFAULT FALSE,
+   is_liked BOOLEAN DEFAULT FALSE,
+   completed_at TIMESTAMP,
    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-   PRIMARY KEY (user_id, quest_id)
+   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+   UNIQUE(user_id, quest_id)
    ```
 
 ### **2.3. API Endpoints**
@@ -84,9 +68,11 @@
 #### **Квесты (публичные)**
 - `GET /api/quests` - Список квестов
   - Параметры:
-    - `city` - фильтр по городу
-    - `difficulty` - фильтр по сложности
-    - `sort` - сортировка (new, popular)
+    - `city` - фильтр по городу (city)
+    - `difficulty` - фильтр по сложности (difficulty)
+    - `author` - фильтр по автору (author)
+    - `is_popular` - только популярные квесты (is_popular = true)
+    - `sort` - сортировка (created_at, likes_count, duration_minutes)
     - `limit`, `offset` - пагинация
 
 - `GET /api/quests/nearby` - Квесты рядом
@@ -97,10 +83,10 @@
 - `GET /api/quests/{id}` - Детали квеста
 
 #### **Требующие авторизации**
-- `POST /api/quests/{id}/like` - Поставить/убрать лайк
-- `GET /api/user/progress` - Прогресс пользователя
-- `POST /api/user/progress/{questId}/start` - Начать квест
-- `PATCH /api/user/progress/{questId}/update` - Обновить прогресс
+- `POST /api/quests/{id}/like` - Поставить/убрать лайк (обновляет is_liked в user_quest_progress)
+- `GET /api/user/progress` - Прогресс пользователя (список записей из user_quest_progress)
+- `POST /api/user/progress/{questId}/start` - Начать квест (создает запись в user_quest_progress)
+- `PATCH /api/user/progress/{questId}/complete` - Завершить квест (is_completed = true, completed_at = now)
 
 ## **3. Frontend (React)**
 
@@ -123,19 +109,26 @@
   - Новые квесты
   - Популярные квесты
 - Карточка квеста:
-  - Название
-  - Изображение
-  - Название, город
-  - Лайки (♥ + количество)
-  - Сложность
-  - Примерное время прохождения
+  - Название (title)
+  - Изображение (image_url)
+  - Описание (description)
+  - Город (city)
+  - Лайки (♥ + likes_count)
+  - Сложность (difficulty)
+  - Время прохождения (duration_minutes)
+  - Расстояние (distance_km)
+  - Автор (author)
+  - Популярность (is_popular)
 
 #### **2. Страница квеста**
-- Полное описание
-- Автор
-- Примерное время прохождения, расстояние
-- Количество лайков
+- Полное описание (description)
+- Автор (author)
+- Время прохождения (duration_minutes) и расстояние (distance_km)
+- Количество лайков (likes_count)
+- Сложность (difficulty)
+- Город (city)
 - Кнопка "Начать квест"
+- Статус популярности (is_popular)
 
 #### **3. Авторизация**
 - Формы входа/регистрации
