@@ -4,7 +4,7 @@ alwaysApply: true
 ---
 rules:
   - name: "Использовать данные из memory-bank"
-    description: |
+    description:
       Всегда учитывай структуру проекта и техническое задание из папки `memory-bank`.
       Если в ней есть файлы (например, `spec.md`, `structure.md`, `task.txt`),
       используй их как основу для генерации и доработки кода.
