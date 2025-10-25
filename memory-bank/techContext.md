@@ -178,6 +178,32 @@ docker-compose logs -f php-fpm
 docker-compose exec php-fpm php bin/console doctrine:migrations:migrate
 ```
 
+### ⚠️ ВАЖНО: Работа с миграциями БД
+
+**При создании/изменении Doctrine миграций ОБЯЗАТЕЛЬНО обновляйте init-db скрипт:**
+
+```bash
+# 1. Создать миграцию
+docker-compose exec php-fpm php bin/console doctrine:migrations:diff
+
+# 2. Применить миграцию
+docker-compose exec php-fpm php bin/console doctrine:migrations:migrate
+
+# 3. ⚠️ ОБНОВИТЬ /data/init-db/cityquest.sql с новой схемой
+# Скопировать структуру таблиц из миграции в init-db скрипт
+
+# 4. Проверить пересозданием контейнеров
+docker-compose down -v
+docker-compose up -d
+docker-compose exec php-fpm php bin/console doctrine:schema:validate
+```
+
+**Зачем это нужно:**
+- Docker init-db скрипт используется при первом запуске контейнера
+- CI/CD использует этот скрипт для развертывания на новых серверах
+- Другие разработчики получат актуальную схему при клонировании репозитория
+- Интеграционные тесты могут использовать чистую БД из init скрипта
+
 ### Frontend
 ```bash
 # Установка
