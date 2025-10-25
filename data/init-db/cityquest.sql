@@ -1,12 +1,21 @@
 -- PostgreSQL init script
--- Database will be created automatically from POSTGRES_DB env variableпше
+-- Database will be created automatically from POSTGRES_DB env variable
+-- 
+-- ВАЖНО: При изменении схемы БД через Doctrine migrations,
+-- не забудьте обновить этот файл соответствующим образом!
+-- Этот скрипт используется для инициализации чистой БД в Docker.
 
 CREATE TABLE IF NOT EXISTS users (
-    id SERIAL PRIMARY KEY,
-    email VARCHAR(255) NOT NULL,
+    id UUID PRIMARY KEY,
+    email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
-    username VARCHAR(100)
+    username VARCHAR(50) NOT NULL UNIQUE,
+    roles JSON NOT NULL DEFAULT '["ROLE_USER"]',
+    created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS users_email_unique ON users (email);
+CREATE UNIQUE INDEX IF NOT EXISTS users_username_unique ON users (username);
 
 CREATE TABLE IF NOT EXISTS quests (
     id SERIAL PRIMARY KEY,
@@ -40,7 +49,7 @@ INSERT INTO quests (title, description, city, difficulty, duration_minutes, dist
 
 CREATE TABLE user_quest_progress (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     quest_id INTEGER NOT NULL REFERENCES quests(id) ON DELETE CASCADE,
     is_completed BOOLEAN DEFAULT FALSE,
     is_liked BOOLEAN DEFAULT FALSE,
