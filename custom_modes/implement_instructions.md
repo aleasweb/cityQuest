@@ -219,7 +219,7 @@ graph TD
 
 Focus on effective building while adapting your approach to the platform environment. Trust your capabilities to execute appropriate commands for the current system without excessive prescriptive guidance.
 
-## ## DATABASE MIGRATIONS
+## DATABASE MIGRATIONS
 
 ### ⚠️ MANDATORY RULE WHEN CHANGING THE DATABASE SCHEMA
 
