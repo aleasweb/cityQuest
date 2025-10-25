@@ -6,11 +6,16 @@
 - Навигация по этапам квеста с использованием геолокации
 - Система авторизации пользователей
 - Лайки и рейтинг квестов
-- Переключение цветовых тем (дневная/ночная)
 
 ## **2. Backend (API на Symfony + PostgreSQL)**
+- **Backend**: Symfony, PostgreSQL, PHP 8.3
+- **Frontend**: React 18, Tailwind, Leaflet
+- **Ios, Android**: Flutter
+- **Инструменты**: Docker, Git, Swagger
+- **Принципы**: Domain driven design, CQRS, структура файлов в [memory-bank/mvp-backend-structure.md]
 
 ### **2.1. Технические требования**
+- **Язык разработки:** PHP 8.3
 - **Фреймворк:** Symfony 6+
 - **База данных:** PostgreSQL 14+
 - **Аутентификация:** Symfony Security Bundle
@@ -45,7 +50,23 @@
    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
    ```
 
-3. **`user_quest_progress`** - прогресс пользователей
+3. **`quest_steps`** - этапы квеста
+   ```sql
+   id INTEGER PRIMARY KEY AUTOINCREMENT,
+   quest_id INTEGER NOT NULL,
+   title TEXT,
+   text TEXT,
+   image_url TEXT,
+   audio_url TEXT,
+   video_url TEXT,
+   lat DECIMAL,
+   lng DECIMAL,
+   radius INTEGER,
+   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+   ```
+
+4. **`user_quest_progress`** - прогресс пользователей
    ```sql
    id INTEGER PRIMARY KEY AUTOINCREMENT,
    user_id TEXT NOT NULL,
@@ -58,7 +79,7 @@
    UNIQUE(user_id, quest_id)
    ```
 
-### **2.3. API Endpoints**
+### **2.3. Public API Endpoints**
 
 #### **Аутентификация**
 - `POST /api/auth/register` - Регистрация
@@ -87,6 +108,12 @@
 - `GET /api/user/progress` - Прогресс пользователя (список записей из user_quest_progress)
 - `POST /api/user/progress/{questId}/start` - Начать квест (создает запись в user_quest_progress)
 - `PATCH /api/user/progress/{questId}/complete` - Завершить квест (is_completed = true, completed_at = now)
+
+### **2.4. Staff API Endpoints**
+
+#### **Создание квеста**
+
+#### **Апрув/блокировка квеста**
 
 ## **3. Frontend (React)**
 
@@ -134,6 +161,13 @@
 - Формы входа/регистрации
 - Валидация полей
 
+#### **4. Профиль**
+- Аватар пользователя (avatar)
+- Имя пользователя (name)
+- Рейтинг 
+- Количество пройденных квестов
+- Отзывы о квестах
+
 ### **3.3. Дизайн-система**
 
 #### **Цветовые темы**
@@ -161,21 +195,20 @@
 - **Логирование:** Основные события
 
 ## **5. Следующие этапы**
-1. Мобильные приложения (React Native)
+1. Мобильные приложения (Flutter)
 2. Создание квестов (админка + пользовательский интерфейс)
 3. Система достижений
 4. Социальные функции (комментарии, рейтинги)
 
-## **6. Сроки и этапы**
-1. **Неделя 1-2:** Базовый API (квесты, этапы)
-2. **Неделя 3-4:** Авторизация, прогресс
-3. **Неделя 5-6:** Главная страница
-4. **Неделя 7-8:** Страницы квеста/этапа
-5. **Неделя 9:** Тестирование, правки
-
-**Технический стек:**
-```
-Backend: Symfony 6, PostgreSQL, PHP 8.1
-Frontend: React 18, Tailwind, Leaflet
-Инструменты: Docker, Git, Swagger
-```
+## **6. Этапы**
+1. API (public) + тесты на API
+   1.1. Профиль
+   1.2. Регистрация, авторизация
+   1.3. Квест, получение данных
+   1.4. Квесты, получение списков
+2. Frontend
+3. Ios
+4. Android
+5. API (staff)+ тесты на API
+   1.1. Создание квеста
+   1.2. Апрув/блокировка квеста
