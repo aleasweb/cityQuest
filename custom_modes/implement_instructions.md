@@ -223,79 +223,10 @@ Focus on effective building while adapting your approach to the platform environ
 
 ### ⚠️ MANDATORY RULE WHEN CHANGING THE DATABASE SCHEMA
 
-**Когда вы создаете или изменяете Doctrine миграции, ВСЕГДА обновляйте init-db скрипт!**
+**When you create or modify Doctrine migrations, ALWAYS update the init-db script!**
 
 ```
-Файл для обновления: /data/init-db/cityquest.sql
-```
-
-#### Процесс обновления схемы БД:
-
-```mermaid
-graph TD
-    A["Изменение Entity"] --> B["doctrine:migrations:diff"]
-    B --> C["Проверка миграции"]
-    C --> D["doctrine:migrations:migrate"]
-    D --> E["⚠️ ОБНОВИТЬ init-db/cityquest.sql"]
-    E --> F["Проверить Docker init"]
-    
-    style A fill:#4da6ff,stroke:#0066cc,color:white
-    style B fill:#ffa64d,stroke:#cc7a30,color:white
-    style C fill:#ffa64d,stroke:#cc7a30,color:white
-    style D fill:#ffa64d,stroke:#cc7a30,color:white
-    style E fill:#ff5555,stroke:#cc0000,color:white
-    style F fill:#5fd94d,stroke:#3da336,color:white
-```
-
-#### Зачем это нужно:
-
-1. **Docker init** - При пересоздании контейнеров БД инициализируется из `cityquest.sql`
-2. **CI/CD** - При развертывании на новых серверах используется init скрипт
-3. **Команда** - Другие разработчики могут получить устаревшую схему
-4. **Тестирование** - Интеграционные тесты могут использовать чистую БД
-
-#### Что обновлять в init-db скрипте:
-
-- ✅ Структуру таблиц (CREATE TABLE)
-- ✅ Типы полей и constraints
-- ✅ Индексы (CREATE INDEX)
-- ✅ Внешние ключи (FOREIGN KEY)
-- ✅ Значения по умолчанию (DEFAULT)
-- ✅ Комментарии о типах Doctrine (например, UUID, JSON)
-
-#### Пример:
-
-После создания миграции для User entity с UUID:
-
-```sql
--- В /data/init-db/cityquest.sql обновляем:
-CREATE TABLE IF NOT EXISTS users (
-    id UUID PRIMARY KEY,                    -- Было: SERIAL
-    email VARCHAR(255) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL,
-    username VARCHAR(50) NOT NULL UNIQUE,   -- Было: VARCHAR(100)
-    roles JSON NOT NULL DEFAULT '["ROLE_USER"]',  -- НОВОЕ ПОЛЕ
-    created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL -- НОВОЕ ПОЛЕ
-);
-```
-
-#### Checklist после миграции:
-
-- [ ] Doctrine миграция создана (`doctrine:migrations:diff`)
-- [ ] Миграция применена (`doctrine:migrations:migrate`)
-- [ ] ✅ **`/data/init-db/cityquest.sql` обновлен с новой схемой**
-- [ ] Внешние ключи обновлены (если изменился тип ID)
-- [ ] Протестирован пересборкой контейнеров (`docker-compose down -v && docker-compose up`)
-
-### Команда для проверки:
-
-```bash
-# Пересоздать контейнеры с чистой БД
-docker-compose down -v
-docker-compose up -d
-
-# Проверить, что схема корректна
-docker-compose exec php-fpm php bin/console doctrine:schema:validate
+file path: /data/init-db/cityquest.sql
 ```
 
 ## VERIFICATION
