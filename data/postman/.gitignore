@@ -1,0 +1,9 @@
+# Игнорировать локальные копии с credentials
+*-local-copy.json
+*-backup.json
+.DS_Store
+
+# Игнорировать Newman отчеты (если запускаются локально)
+newman/
+newman-*.html
+*.log
