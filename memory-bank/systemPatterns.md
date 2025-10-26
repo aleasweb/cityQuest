@@ -116,28 +116,41 @@ src/
 
 ---
 
-## 🔐 Authentication Patterns (Added: 2025-10-25, Task: CQST-001)
+## 🔐 Authentication Patterns (Added: 2025-10-25, Task: CQST-001; Updated: 2025-10-26, Task: CQST-002)
 
 ### JWT Authentication with LexikJWTAuthenticationBundle
 
-**Pattern:** Token-based REST API authentication using JWT
+**Pattern:** Token-based REST API authentication using JWT with username-based login
 
 **Implementation:**
 ```yaml
 # config/packages/security.yaml
+providers:
+    app_user_provider:
+        entity:
+            class: App\User\Domain\Entity\User
+            property: username  # Load user by username
+
 firewalls:
+    api_public:
+        pattern: ^/api/auth/(register|logout)
+        stateless: true
+        security: false
+    
     api_login:
         pattern: ^/api/auth/login
         stateless: true
+        provider: app_user_provider
         json_login:
             check_path: api_auth_login
-            username_path: email
+            username_path: username  # Accept username in login request
             password_path: password
             success_handler: lexik_jwt_authentication.handler.authentication_success
     
     api:
         pattern: ^/api
         stateless: true
+        provider: app_user_provider
         jwt: ~
 ```
 
@@ -148,14 +161,32 @@ lexik_jwt_authentication:
     secret_key: '%env(resolve:JWT_SECRET_KEY)%'
     public_key: '%env(resolve:JWT_PUBLIC_KEY)%'
     pass_phrase: '%env(JWT_PASSPHRASE)%'
-    user_id_claim: email  # ⚠️ CRITICAL: Must match UserInterface::getUserIdentifier()
+    user_id_claim: username  # ⚠️ CRITICAL: Must match UserInterface::getUserIdentifier()
+```
+
+**Domain Implementation:**
+```php
+// User entity must return username from getUserIdentifier()
+public function getUserIdentifier(): string
+{
+    return $this->username;
+}
 ```
 
 **Lessons:**
 - `user_id_claim` must match what `getUserIdentifier()` returns
-- Use email as identifier for better UX (users remember emails)
+- `username_path` in json_login must match the field sent by client
+- `provider.property` must match the field used to load user from DB
+- Username-based auth is more memorable for users than email
+- Separate public firewall for registration/logout endpoints
 - Stateless firewalls for REST APIs
-- Separate login firewall from protected API firewall
+
+**Login Flow:**
+1. Client sends `{"username": "user123", "password": "secret"}`
+2. Symfony loads user by username from database
+3. Password verified against hashed password
+4. JWT token generated with username claim
+5. Token returned to client: `{"token": "eyJ..."}`
 
 ---
 
