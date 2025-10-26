@@ -215,11 +215,11 @@ class AuthControllerTest extends WebTestCase
 
         $this->assertResponseStatusCodeSame(Response::HTTP_CREATED);
 
-        // Now login
+        // Now login with username
         $client->request('POST', '/api/auth/login', [], [], [
             'CONTENT_TYPE' => 'application/json',
         ], json_encode([
-            'email' => 'logintest@example.com',
+            'username' => 'loginuser',
             'password' => 'password123',
         ]));
 
@@ -234,14 +234,14 @@ class AuthControllerTest extends WebTestCase
         $this->assertCount(3, $tokenParts);
     }
 
-    public function testLoginWithInvalidEmail(): void
+    public function testLoginWithInvalidUsername(): void
     {
         $client = static::createClient();
 
         $client->request('POST', '/api/auth/login', [], [], [
             'CONTENT_TYPE' => 'application/json',
         ], json_encode([
-            'email' => 'nonexistent@example.com',
+            'username' => 'nonexistentuser',
             'password' => 'password123',
         ]));
 
@@ -267,7 +267,7 @@ class AuthControllerTest extends WebTestCase
         $client->request('POST', '/api/auth/login', [], [], [
             'CONTENT_TYPE' => 'application/json',
         ], json_encode([
-            'email' => 'pwdtest@example.com',
+            'username' => 'pwduser',
             'password' => 'wrongpassword',
         ]));
 
@@ -281,7 +281,7 @@ class AuthControllerTest extends WebTestCase
         $client->request('POST', '/api/auth/login', [], [], [
             'CONTENT_TYPE' => 'application/json',
         ], json_encode([
-            'email' => 'doesnotexist@example.com',
+            'username' => 'doesnotexistuser',
             'password' => 'password123',
         ]));
 

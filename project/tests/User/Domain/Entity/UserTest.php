@@ -60,14 +60,14 @@ class UserTest extends TestCase
         $this->assertSame($password, $user->getPassword());
     }
 
-    public function testGetUserIdentifierReturnsEmail(): void
+    public function testGetUserIdentifierReturnsUsername(): void
     {
         $user = new User();
-        $email = 'user@example.com';
+        $username = 'testuser';
         
-        $user->setEmail($email);
+        $user->setUsername($username);
         
-        $this->assertSame($email, $user->getUserIdentifier());
+        $this->assertSame($username, $user->getUserIdentifier());
     }
 
     public function testUserHasDefaultRoleUser(): void

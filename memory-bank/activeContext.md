@@ -5,10 +5,30 @@
 ## 🎯 Текущий статус
 
 **Режим:** 🏁 **READY FOR NEW TASK**  
-**Последняя задача:** CQST-001 - Система регистрации и авторизации ✅ ARCHIVED  
+**Последняя задача:** CQST-002 - Переход на авторизацию через username ✅ ARCHIVED  
 **Memory Bank Status:** Очищен и готов для следующей задачи
 
 ## 📊 Последняя завершенная задача
+
+### CQST-002: Переход на авторизацию через username + password
+**Статус:** ✅ COMPLETED & ARCHIVED (2025-10-26)  
+**Archive:** `memory-bank/archive/archive-CQST-002-20251026.md`
+
+**Достижения:**
+- Username-based authentication вместо email
+- 6 файлов обновлено (config, domain, tests, docs)
+- 28 tests, 78 assertions (100% pass)
+- PHPStan Level 8: 0 errors
+- Время: 1.5 часа (в плане)
+
+**Ключевые находки:**
+- Три точки синхронизации для username auth
+- JWT токены с email становятся невалидными
+- Username лучше для UX (короче, легче запомнить)
+
+---
+
+## 📊 Завершенные задачи
 
 ### CQST-001: Система регистрации и авторизации
 **Статус:** ✅ COMPLETED & ARCHIVED (2025-10-25)  
@@ -30,13 +50,16 @@
 - Integration Testing pattern
 - Domain Exception pattern
 
+---
+
 ## 🏗️ Текущая архитектура проекта
 
 ### Backend (Symfony 7.2)
 **Завершенные Bounded Contexts:**
-- ✅ **User Context** - Registration, Authentication (JWT)
+- ✅ **User Context** - Registration, Authentication (JWT, username-based)
   - REST API: `/api/auth/register`, `/api/auth/login`, `/api/auth/logout`
-  - 25 tests, 100% coverage критических путей
+  - 28 tests, 100% coverage критических путей
+  - Username-based login с JWT токенами
 
 **Незавершенные Bounded Contexts:**
 - ⏳ **Quest Context** - Quest management (not started)
@@ -58,6 +81,8 @@
 - ✅ Database migrations workflow
 - ✅ Testing infrastructure (unit + integration)
 
+---
+
 ## 📚 Доступные ресурсы
 
 ### Patterns & Guidelines
@@ -74,47 +99,54 @@
 
 ### Archives
 - `memory-bank/archive/archive-CQST-001-20251025.md` - Authentication system
+- `memory-bank/archive/archive-CQST-002-20251026.md` - Username-based auth
+
+---
 
 ## ⏭️ Рекомендуемые следующие задачи
 
-### Вариант 1: User Profile Management (CQST-002)
+### Вариант 1: User Profile Management (CQST-003)
 **Приоритет:** Высокий  
 **Сложность:** Level 2 (Simple Enhancement)  
 **Описание:** Добавить управление профилем пользователя
 - GET `/api/users/me` - получить профиль
-- PATCH `/api/users/me` - обновить профиль
+- PATCH `/api/users/me` - обновить профиль (username, email)
 - DELETE `/api/users/me` - удалить аккаунт
 
 **Преимущества:**
 - Естественное продолжение User Context
 - Переиспользование существующей DDD структуры
-- Низкий риск, быстрая реализация
+- Низкий риск, быстрая реализация (~2-3 часа)
 
-### Вариант 2: Quest Management System (CQST-003)
+### Вариант 2: Quest Management System (CQST-004)
 **Приоритет:** Высокий (ключевая MVP функция)  
 **Сложность:** Level 3 (Intermediate Feature)  
 **Описание:** Создать систему управления квестами
 - CRUD операции для квестов
 - Quest stages и checkpoints
 - Quest progress tracking
+- Геолокация и маршруты
 
 **Преимущества:**
 - Core MVP feature
 - Большая бизнес-ценность
 - Новый Bounded Context (практика DDD)
+- ~1-2 дня работы
 
-### Вариант 3: Email Verification (CQST-004)
+### Вариант 3: Password Reset Flow (CQST-005)
 **Приоритет:** Средний (улучшение security)  
 **Сложность:** Level 2 (Simple Enhancement)  
-**Описание:** Добавить верификацию email при регистрации
-- Генерация verification token
-- Отправка email (SendGrid/Mailgun)
-- Endpoint верификации
+**Описание:** Добавить восстановление пароля
+- POST `/api/auth/password/forgot` - запрос сброса
+- POST `/api/auth/password/reset` - установка нового пароля
+- Email с токеном сброса
 
 **Преимущества:**
-- Повышает безопасность
-- Небольшое расширение User Context
-- Практика интеграции внешних сервисов
+- Важная security feature
+- Практика работы с email сервисами
+- ~3-4 часа работы
+
+---
 
 ## 🚀 Как начать новую задачу
 
@@ -143,11 +175,11 @@ Brief description: [описание]
 ## 📊 Memory Bank Summary
 
 **Status:** ✅ Clean and ready  
-**Last Update:** 2025-10-25  
-**Completed Tasks:** 1 (CQST-001)  
+**Last Update:** 2025-10-26  
+**Completed Tasks:** 2 (CQST-001, CQST-002)  
 **Active Tasks:** 0  
 **Available Patterns:** 6  
-**Test Coverage:** 25 tests (User Context)
+**Test Coverage:** 28 tests (User Context)
 
 **Project Stage:** MVP Development - Authentication ✅, Core Features ⏳
 
