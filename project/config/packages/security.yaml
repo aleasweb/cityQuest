@@ -20,6 +20,12 @@ security:
             stateless: true
             security: false
         
+        # Public users endpoints (GET /api/users/{username})
+        api_users_public:
+            pattern: ^/api/users
+            stateless: true
+            security: false
+        
         # JWT Login endpoint
         api_login:
             pattern: ^/api/auth/login

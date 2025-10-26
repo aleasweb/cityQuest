@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "cityquest-api-v1",
 		"name": "CityQuest API",
-		"description": "Complete API collection for CityQuest MVP - Urban Quest Game\n\n## Authentication\nThe API uses JWT (JSON Web Tokens) for authentication. After successful login or registration, you'll receive a token that should be included in the Authorization header for protected endpoints.\n\n## Base URL\n- Local: http://cityquest.test\n- Production: (to be configured)\n\n## Getting Started\n1. Register a new user\n2. Login to get JWT token\n3. Token will be automatically saved to environment variable\n4. Use protected endpoints with the token\n\n## Version\nAPI Version: 1.0.0\nLast Updated: 2025-10-25",
+		"description": "Complete API collection for CityQuest MVP - Urban Quest Game\n\n## Authentication\nThe API uses JWT (JSON Web Tokens) for authentication. After successful login or registration, you'll receive a token that should be included in the Authorization header for protected endpoints.\n\n## Base URL\n- Local: http://cityquest.test\n- Production: (to be configured)\n\n## Getting Started\n1. Register a new user\n2. Login to get JWT token\n3. Token will be automatically saved to environment variable\n4. Use protected endpoints with the token\n\n## Version\nAPI Version: 1.0.1\nLast Updated: 2025-10-26\n\n## New Features (v1.0.1)\n- User Profile Management\n- Public user profiles\n- Profile update functionality",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "cityquest"
 	},
@@ -263,7 +263,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"email\": \"{{user_email}}\",\n    \"password\": \"{{user_password}}\"\n}",
+							"raw": "{\n    \"username\": \"{{user_username}}\",\n    \"password\": \"{{user_password}}\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -281,7 +281,7 @@
 								"login"
 							]
 						},
-						"description": "Authenticate user and receive JWT token.\n\n**Request Body:**\n- `email` (string, required): User's email address\n- `password` (string, required): User's password\n\n**Success Response (200):**\n```json\n{\n  \"token\": \"eyJ0eXAiOiJKV1QiLCJhbGc...\",\n  \"user\": {\n    \"email\": \"user@example.com\",\n    \"username\": \"username\",\n    \"roles\": [\"ROLE_USER\"]\n  }\n}\n```\n\n**Error Responses:**\n- `401` - Invalid credentials\n\n**Note:** The JWT token is automatically saved to the `jwt_token` environment variable after successful login."
+						"description": "Authenticate user and receive JWT token.\n\n**Request Body:**\n- `username` (string, required): User's username\n- `password` (string, required): User's password\n\n**Success Response (200):**\n```json\n{\n  \"token\": \"eyJ0eXAiOiJKV1QiLCJhbGc...\",\n  \"user\": {\n    \"email\": \"user@example.com\",\n    \"username\": \"username\",\n    \"roles\": [\"ROLE_USER\"]\n  }\n}\n```\n\n**Error Responses:**\n- `401` - Invalid credentials\n\n**Note:** The JWT token is automatically saved to the `jwt_token` environment variable after successful login."
 					},
 					"response": [
 						{
@@ -296,7 +296,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"email\": \"john.doe@example.com\",\n    \"password\": \"securePassword123\"\n}",
+									"raw": "{\n    \"username\": \"johndoe\",\n    \"password\": \"securePassword123\"\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -339,7 +339,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"email\": \"john.doe@example.com\",\n    \"password\": \"wrongPassword\"\n}",
+									"raw": "{\n    \"username\": \"johndoe\",\n    \"password\": \"wrongPassword\"\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -453,6 +453,527 @@
 				}
 			],
 			"description": "Authentication endpoints for user registration, login, and logout.\n\n## Authentication Flow\n1. Register a new user or use existing credentials\n2. Login to obtain JWT token\n3. Token is automatically saved to environment variable\n4. Use token for authenticated requests\n5. Logout to clear token from environment"
+		},
+		{
+			"name": "User Profile",
+			"item": [
+				{
+					"name": "Get My Profile",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Test response status",
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"// Test response structure",
+									"pm.test(\"Response has profile data\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('id');",
+									"    pm.expect(jsonData).to.have.property('email');",
+									"    pm.expect(jsonData).to.have.property('username');",
+									"    pm.expect(jsonData).to.have.property('createdAt');",
+									"});",
+									"",
+									"// Validate UUID format",
+									"pm.test(\"User ID is valid UUID\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    var uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;",
+									"    pm.expect(jsonData.id).to.match(uuidRegex);",
+									"});",
+									"",
+									"// Test email is present (private profile)",
+									"pm.test(\"Profile contains email (private)\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.email).to.be.a('string');",
+									"    pm.expect(jsonData.email).to.include('@');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/user/profile",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"user",
+								"profile"
+							]
+						},
+						"description": "Get current user's profile (requires authentication).\n\n**Authentication:** JWT token required\n\n**Success Response (200):**\n```json\n{\n  \"id\": \"uuid\",\n  \"email\": \"user@example.com\",\n  \"username\": \"username\",\n  \"createdAt\": \"2025-10-26 12:00:00\"\n}\n```\n\n**Error Responses:**\n- `401` - Unauthorized (missing or invalid JWT token)\n\n**Note:** This endpoint returns the full profile including email address."
+					},
+					"response": [
+						{
+							"name": "Success - My Profile",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/user/profile",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"user",
+										"profile"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"id\": \"9d7f8a2b-3c4e-4f5a-8b6c-1d2e3f4a5b6c\",\n    \"email\": \"john.doe@example.com\",\n    \"username\": \"johndoe\",\n    \"createdAt\": \"2025-10-26 12:00:00\"\n}"
+						},
+						{
+							"name": "Error - Unauthorized",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/user/profile",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"user",
+										"profile"
+									]
+								}
+							},
+							"status": "Unauthorized",
+							"code": 401,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"code\": 401,\n    \"message\": \"JWT Token not found\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Get Public Profile",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Test response status",
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"// Test response structure",
+									"pm.test(\"Response has public profile data\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('id');",
+									"    pm.expect(jsonData).to.have.property('username');",
+									"    pm.expect(jsonData).to.have.property('createdAt');",
+									"});",
+									"",
+									"// Test email is NOT present (public profile)",
+									"pm.test(\"Profile does not contain email (public)\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.not.have.property('email');",
+									"});",
+									"",
+									"// Validate UUID format",
+									"pm.test(\"User ID is valid UUID\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    var uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;",
+									"    pm.expect(jsonData.id).to.match(uuidRegex);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/users/{{public_username}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"{{public_username}}"
+							]
+						},
+						"description": "Get public profile of any user by username (no authentication required).\n\n**Authentication:** None required (public endpoint)\n\n**Path Parameters:**\n- `username` (string): Username of the user to get profile for\n\n**Success Response (200):**\n```json\n{\n  \"id\": \"uuid\",\n  \"username\": \"username\",\n  \"createdAt\": \"2025-10-26 12:00:00\"\n}\n```\n\n**Error Responses:**\n- `404` - User not found\n\n**Note:** This endpoint returns only public information (no email address). Useful for viewing profiles of quest authors."
+					},
+					"response": [
+						{
+							"name": "Success - Public Profile",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/users/johndoe",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"users",
+										"johndoe"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"id\": \"9d7f8a2b-3c4e-4f5a-8b6c-1d2e3f4a5b6c\",\n    \"username\": \"johndoe\",\n    \"createdAt\": \"2025-10-26 12:00:00\"\n}"
+						},
+						{
+							"name": "Error - User Not Found",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/users/nonexistentuser",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"users",
+										"nonexistentuser"
+									]
+								}
+							},
+							"status": "Not Found",
+							"code": 404,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"error\": \"User with username \\\"nonexistentuser\\\" not found\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Update My Profile",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Test response status",
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"// Test response structure",
+									"pm.test(\"Response has success message and user data\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('message');",
+									"    pm.expect(jsonData).to.have.property('user');",
+									"    pm.expect(jsonData.user).to.have.property('id');",
+									"    pm.expect(jsonData.user).to.have.property('email');",
+									"    pm.expect(jsonData.user).to.have.property('username');",
+									"    pm.expect(jsonData.user).to.have.property('createdAt');",
+									"});",
+									"",
+									"// Test email was updated",
+									"pm.test(\"Email was updated\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    var requestData = JSON.parse(pm.request.body.raw);",
+									"    if (requestData.email) {",
+									"        pm.expect(jsonData.user.email).to.equal(requestData.email);",
+									"    }",
+									"});",
+									"",
+									"// Test success message",
+									"pm.test(\"Success message is present\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.message).to.include('updated');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"{{new_user_email}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/user/profile",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"user",
+								"profile"
+							]
+						},
+						"description": "Update current user's profile (requires authentication).\n\n**Authentication:** JWT token required\n\n**Request Body:**\n- `email` (string, optional): New email address (must be valid format and unique)\n\n**Success Response (200):**\n```json\n{\n  \"message\": \"Profile updated successfully\",\n  \"user\": {\n    \"id\": \"uuid\",\n    \"email\": \"newemail@example.com\",\n    \"username\": \"username\",\n    \"createdAt\": \"2025-10-26 12:00:00\"\n  }\n}\n```\n\n**Error Responses:**\n- `400` - Validation failed (invalid email format)\n- `401` - Unauthorized (missing or invalid JWT token)\n- `409` - Conflict (email already exists)\n\n**Note:** Username cannot be changed as it's used as the user identifier."
+					},
+					"response": [
+						{
+							"name": "Success - Profile Updated",
+							"originalRequest": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"email\": \"john.newemail@example.com\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{base_url}}/api/user/profile",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"user",
+										"profile"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"message\": \"Profile updated successfully\",\n    \"user\": {\n        \"id\": \"9d7f8a2b-3c4e-4f5a-8b6c-1d2e3f4a5b6c\",\n        \"email\": \"john.newemail@example.com\",\n        \"username\": \"johndoe\",\n        \"createdAt\": \"2025-10-26 12:00:00\"\n    }\n}"
+						},
+						{
+							"name": "Error - Duplicate Email",
+							"originalRequest": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"email\": \"existing@example.com\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{base_url}}/api/user/profile",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"user",
+										"profile"
+									]
+								}
+							},
+							"status": "Conflict",
+							"code": 409,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"error\": \"User with email \\\"existing@example.com\\\" already exists\"\n}"
+						},
+						{
+							"name": "Error - Invalid Email",
+							"originalRequest": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"email\": \"invalid-email-format\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{base_url}}/api/user/profile",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"user",
+										"profile"
+									]
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"error\": \"Validation failed\",\n    \"violations\": {\n        \"email\": \"Invalid email format\"\n    }\n}"
+						},
+						{
+							"name": "Error - Unauthorized",
+							"originalRequest": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"email\": \"newemail@example.com\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{base_url}}/api/user/profile",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"user",
+										"profile"
+									]
+								}
+							},
+							"status": "Unauthorized",
+							"code": 401,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"code\": 401,\n    \"message\": \"JWT Token not found\"\n}"
+						}
+					]
+				}
+			],
+			"description": "User profile management endpoints.\n\n## Profile Features\n- View your own profile (with email)\n- View public profiles of other users (without email)\n- Update your email address\n- Username cannot be changed (used as identifier)\n\n## Security\n- Private endpoints require JWT authentication\n- Public profile endpoint is accessible without authentication\n- Email addresses are only visible in your own profile\n\n## Use Cases\n- User account management\n- Viewing quest author profiles\n- Profile updates and maintenance"
 		},
 		{
 			"name": "Health Check",
