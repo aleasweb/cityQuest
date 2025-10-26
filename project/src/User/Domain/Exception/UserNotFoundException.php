@@ -17,4 +17,9 @@ class UserNotFoundException extends \DomainException
     {
         return new self(sprintf('User with email "%s" not found', $email));
     }
+
+    public static function withUsername(string $username): self
+    {
+        return new self(sprintf('User with username "%s" not found', $username));
+    }
 }
