@@ -33,6 +33,8 @@ composer: ## Run composer command (Example: make composer c='req symfony/uid')
 	@$(COMPOSER) $(c)
 
 test: ## Run all tests (Example specify: make test c=tests/Functional)
+	@$(CONSOLE) doctrine:schema:drop --env=test --force --full-database --quiet	
+	@$(CONSOLE) doctrine:migrations:migrate --env=test --no-interaction --quiet
 	@$(PHPUNIT) $(c)
 
 console: ## Run console (Example: make console c=make:controller)

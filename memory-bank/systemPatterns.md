@@ -412,5 +412,15 @@ try {
 
 ---
 
+## 📬 Real-time Domain Event Processing via Messenger
+
+### Pattern: Domain Events с Symfony Messenger (Sync Mode)
+
+**Usage:** Business event processing synchronously within the same HTTP request
+
+**Documentation:** `memory-bank/mvp-events.md`
+
+---
+
 **Pattern Source:** Task CQST-001 - Registration and Authentication System  
-**Documentation:** `memory-bank/reflection/reflection-CQST-001.md`
+**Documentation:** `memory-bank/reflection/reflection-CQST-001.md`, `project/docs/EVENTS.md`

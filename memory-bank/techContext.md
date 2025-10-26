@@ -10,6 +10,7 @@
 - **Database:** PostgreSQL 16
 - **ORM:** Doctrine ORM
 - **Authentication:** Symfony Security Bundle
+- **Events:** Symfony Messenger (sync mode)
 - **Testing:** PHPUnit 10+
 - **Code Quality:** PHPStan, PHP-CS-Fixer
 
@@ -50,6 +51,8 @@ services:
 Основные:
 - `symfony/framework-bundle`
 - `symfony/security-bundle`
+- `symfony/messenger` - обработка доменных событий
+- `symfony/doctrine-messenger` - Doctrine транспорт для Messenger
 - `doctrine/orm`
 - `doctrine/doctrine-bundle`
 - `doctrine/doctrine-migrations-bundle`
@@ -165,6 +168,9 @@ docker-compose exec php-fpm vendor/bin/php-cs-fixer fix
 # Установка зависимостей
 make install
 
+# Запуск проекта
+make up
+
 # Запуск контейнеров
 docker-compose up -d
 
@@ -234,4 +240,4 @@ npm run preview
 
 ---
 
-**Последнее обновление:** 2025-10-25
+**Последнее обновление:** 2025-10-26
