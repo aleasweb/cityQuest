@@ -33,9 +33,6 @@ class UserProgressController extends AbstractController
     public function getUserProgress(Request $request): JsonResponse
     {
         $user = $this->getUser();
-        if (!$user) {
-            return $this->json(['error' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
-        }
         $userId = $user->getId();
 
         $status = $request->query->get('status');
@@ -71,9 +68,6 @@ class UserProgressController extends AbstractController
     {
         try {
             $user = $this->getUser();
-            if (!$user) {
-                return $this->json(['error' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
-            }
             $userId = $user->getId();
             $questUuid = Uuid::fromString($questId);
 
@@ -113,9 +107,6 @@ class UserProgressController extends AbstractController
     {
         try {
             $user = $this->getUser();
-            if (!$user) {
-                return $this->json(['error' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
-            }
             $userId = $user->getId();
             $questUuid = Uuid::fromString($questId);
 
@@ -155,9 +146,6 @@ class UserProgressController extends AbstractController
     {
         try {
             $user = $this->getUser();
-            if (!$user) {
-                return $this->json(['error' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
-            }
             $userId = $user->getId();
             $questUuid = Uuid::fromString($questId);
 

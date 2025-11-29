@@ -4,26 +4,19 @@ declare(strict_types=1);
 
 namespace App\Tests\Quest\Presentation\Controller;
 
-use App\Quest\Domain\Entity\Quest;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Tests\Helper\EntityManagerTrait;
+use App\Tests\Helper\TestObjectFactory;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\Uid\Uuid;
 
 class QuestControllerTest extends WebTestCase
 {
-    private ?EntityManagerInterface $entityManager = null;
-
-    protected function setUp(): void
-    {
-        // EntityManager будет инициализирован в каждом тесте отдельно
-    }
+    use EntityManagerTrait;
 
     protected function tearDown(): void
     {
         parent::tearDown();
-        if ($this->entityManager) {
-            $this->entityManager->close();
-        }
+        $this->closeEntityManager();
     }
 
     public function testGetQuestReturnsQuestData(): void
@@ -31,7 +24,7 @@ class QuestControllerTest extends WebTestCase
         $client = static::createClient();
         
         // Создаем тестовый квест
-        $quest = $this->createTestQuest('Integration Test Quest');
+        $quest = TestObjectFactory::createQuestWithDefaults($this->getEntityManager(), 'Integration Test Quest');
         
         $client->request('GET', '/api/quests/' . (string) $quest->getId());
         
@@ -88,7 +81,7 @@ class QuestControllerTest extends WebTestCase
         $client = static::createClient();
         
         // Создаем тестовый квест
-        $quest = $this->createTestQuest('Public Access Test Quest');
+        $quest = TestObjectFactory::createQuest($this->getEntityManager(), 'Public Access Test Quest');
         
         // Запрос без JWT токена
         $client->request('GET', '/api/quests/' . (string) $quest->getId());
@@ -105,8 +98,8 @@ class QuestControllerTest extends WebTestCase
         $client = static::createClient();
         
         // Создаем несколько тестовых квестов
-        $quest1 = $this->createTestQuest('Quest List Test 1');
-        $quest2 = $this->createTestQuest('Quest List Test 2');
+        $quest1 = TestObjectFactory::createQuest($this->getEntityManager(), 'Quest List Test 1');
+        $quest2 = TestObjectFactory::createQuest($this->getEntityManager(), 'Quest List Test 2');
         
         $client->request('GET', '/api/quests');
         
@@ -128,7 +121,7 @@ class QuestControllerTest extends WebTestCase
     {
         $client = static::createClient();
         
-        $quest = $this->createTestQuest('Moscow Quest');
+        $quest = TestObjectFactory::createQuest($this->getEntityManager(), 'Moscow Quest');
         
         $client->request('GET', '/api/quests?city=Moscow');
         
@@ -149,7 +142,7 @@ class QuestControllerTest extends WebTestCase
         
         // Create multiple quests
         for ($i = 1; $i <= 3; $i++) {
-            $this->createTestQuest("Pagination Test Quest $i");
+            TestObjectFactory::createQuest($this->getEntityManager(), "Pagination Test Quest $i");
         }
         
         $client->request('GET', '/api/quests?limit=2&offset=0');
@@ -181,7 +174,12 @@ class QuestControllerTest extends WebTestCase
         $client = static::createClient();
         
         // Create quest with coordinates (Moscow center)
-        $quest = $this->createTestQuestWithCoordinates('Moscow Nearby Quest', 55.7558, 37.6173);
+        $quest = TestObjectFactory::createQuest(
+            entityManager: $this->getEntityManager(),
+            title: 'Moscow Nearby Quest',
+            latitude: 55.7558,
+            longitude: 37.6173
+        );
         
         // Search nearby (very close to the quest)
         $client->request('GET', '/api/quests/nearby?lat=55.7558&lng=37.6173&radius=10');
@@ -194,49 +192,5 @@ class QuestControllerTest extends WebTestCase
         $this->assertEquals(55.7558, $response['meta']['latitude']);
         $this->assertEquals(37.6173, $response['meta']['longitude']);
         $this->assertEquals(10, $response['meta']['radius']);
-    }
-
-    /**
-     * Helper метод для создания тестового квеста.
-     */
-    private function createTestQuest(string $title): Quest
-    {
-        // Получаем EntityManager из контейнера
-        if (!$this->entityManager) {
-            $kernel = self::bootKernel();
-            $this->entityManager = $kernel->getContainer()
-                ->get('doctrine')
-                ->getManager();
-        }
-        
-        $quest = new Quest($title);
-        $quest->setDescription('Test description for integration');
-        $quest->setCity('Moscow');
-        $quest->setDifficulty('medium');
-        $quest->setDurationMinutes(90);
-        $quest->setDistanceKm(3.2);
-        $quest->setImageUrl('https://example.com/test-image.jpg');
-        $quest->setAuthor('Integration Author');
-        $quest->setLikesCount(15);
-        $quest->setIsPopular(true);
-        
-        $this->entityManager->persist($quest);
-        $this->entityManager->flush();
-        
-        return $quest;
-    }
-
-    /**
-     * Helper метод для создания тестового квеста с координатами.
-     */
-    private function createTestQuestWithCoordinates(string $title, float $lat, float $lng): Quest
-    {
-        $quest = $this->createTestQuest($title);
-        $quest->setLatitude($lat);
-        $quest->setLongitude($lng);
-        
-        $this->entityManager->flush();
-        
-        return $quest;
     }
 }
