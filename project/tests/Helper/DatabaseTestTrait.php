@@ -81,31 +81,5 @@ trait DatabaseTestTrait
             }
         }
     }
-
-    /**
-     * Очищает все пользовательские таблицы в тестовой базе данных.
-     * Использует TRUNCATE для быстрой очистки.
-     */
-    protected function clearAllTables(): void
-    {
-        $em = $this->getEntityManager();
-        $connection = $em->getConnection();
-        
-        // Получаем все таблицы
-        $schemaManager = $connection->createSchemaManager();
-        $tables = $schemaManager->listTableNames();
-        
-        // Фильтруем системные таблицы PostgreSQL
-        $tables = array_filter($tables, function($table) {
-            return !str_starts_with($table, 'pg_') && 
-                   !str_starts_with($table, 'information_schema') &&
-                   $table !== 'doctrine_migration_versions';
-        });
-        
-        // Очищаем каждую таблицу (PostgreSQL)
-        foreach ($tables as $tableName) {
-            $connection->executeStatement("TRUNCATE TABLE \"{$tableName}\" RESTART IDENTITY CASCADE");
-        }
-    }
 }
 

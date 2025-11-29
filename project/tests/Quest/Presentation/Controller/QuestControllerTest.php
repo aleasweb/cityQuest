@@ -4,14 +4,21 @@ declare(strict_types=1);
 
 namespace App\Tests\Quest\Presentation\Controller;
 
-use App\Tests\Helper\EntityManagerTrait;
+use App\Tests\Helper\DatabaseTestTrait;
 use App\Tests\Helper\TestObjectFactory;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\Uid\Uuid;
 
 class QuestControllerTest extends WebTestCase
 {
-    use EntityManagerTrait;
+    use DatabaseTestTrait;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // Очищаем таблицы перед каждым тестом
+        $this->cleanupDatabase();
+    }
 
     protected function tearDown(): void
     {
@@ -174,11 +181,17 @@ class QuestControllerTest extends WebTestCase
         $client = static::createClient();
         
         // Create quest with coordinates (Moscow center)
-        $quest = TestObjectFactory::createQuest(
+        $quest1 = TestObjectFactory::createQuest(
             entityManager: $this->getEntityManager(),
             title: 'Moscow Nearby Quest',
             latitude: 55.7558,
             longitude: 37.6173
+        );
+        $quest2 = TestObjectFactory::createQuest(
+            entityManager: $this->getEntityManager(),
+            title: 'London Quest',
+            latitude: 51.5002,
+            longitude: 0.0000
         );
         
         // Search nearby (very close to the quest)
@@ -192,5 +205,18 @@ class QuestControllerTest extends WebTestCase
         $this->assertEquals(55.7558, $response['meta']['latitude']);
         $this->assertEquals(37.6173, $response['meta']['longitude']);
         $this->assertEquals(10, $response['meta']['radius']);
+        
+        // Проверяем, что вернулся корректный квест (московский)
+        $this->assertCount(1, $response['data'], 'Должен вернуться только один квест в радиусе');
+        
+        $returnedQuest = $response['data'][0];
+        $this->assertEquals((string) $quest1->getId(), $returnedQuest['id']);
+        $this->assertEquals('Moscow Nearby Quest', $returnedQuest['title']);
+        $this->assertEquals(55.7558, $returnedQuest['latitude']);
+        $this->assertEquals(37.6173, $returnedQuest['longitude']);
+        
+        // Проверяем, что лондонский квест НЕ вернулся
+        $questIds = array_column($response['data'], 'id');
+        $this->assertNotContains((string) $quest2->getId(), $questIds, 'Лондонский квест не должен попасть в результаты поиска по Москве');
     }
 }

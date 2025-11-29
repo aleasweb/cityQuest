@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace App\Tests\UserProgress\Presentation\Controller;
 
 use App\Tests\Helper\TestAuthClient;
-use App\Tests\Helper\EntityManagerTrait;
+use App\Tests\Helper\DatabaseTestTrait;
 use App\Tests\Helper\TestObjectFactory;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
 class UserProgressControllerTest extends WebTestCase
 {
-    use EntityManagerTrait;
+    use DatabaseTestTrait;
 
     protected function tearDown(): void
     {
