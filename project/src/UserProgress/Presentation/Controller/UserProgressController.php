@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\UserProgress\Presentation\Controller;
 
 use App\Quest\Domain\Exception\QuestNotFoundException;
+use App\Shared\Presentation\Trait\AuthenticationTrait;
 use App\UserProgress\Application\Service\UserProgressService;
 use App\UserProgress\Domain\Exception\ActiveQuestExistsException;
 use App\UserProgress\Domain\Exception\InvalidQuestStatusException;
@@ -19,6 +20,7 @@ use Symfony\Component\Uid\Uuid;
 #[Route('/api/user/progress', name: 'api_user_progress_')]
 class UserProgressController extends AbstractController
 {
+    use AuthenticationTrait;
     public function __construct(
         private readonly UserProgressService $progressService
     ) {
@@ -32,7 +34,10 @@ class UserProgressController extends AbstractController
     #[Route('', name: 'get', methods: ['GET'])]
     public function getUserProgress(Request $request): JsonResponse
     {
-        $user = $this->getUser();
+        $user = $this->getAuthenticatedUserOr401Response();
+        if ($user instanceof JsonResponse) {
+            return $user;
+        }
         $userId = $user->getId();
 
         $status = $request->query->get('status');
@@ -67,7 +72,10 @@ class UserProgressController extends AbstractController
     public function startQuest(string $questId): JsonResponse
     {
         try {
-            $user = $this->getUser();
+            $user = $this->getAuthenticatedUserOr401Response();
+            if ($user instanceof JsonResponse) {
+                return $user;
+            }
             $userId = $user->getId();
             $questUuid = Uuid::fromString($questId);
 
@@ -106,7 +114,10 @@ class UserProgressController extends AbstractController
     public function pauseQuest(string $questId): JsonResponse
     {
         try {
-            $user = $this->getUser();
+            $user = $this->getAuthenticatedUserOr401Response();
+            if ($user instanceof JsonResponse) {
+                return $user;
+            }
             $userId = $user->getId();
             $questUuid = Uuid::fromString($questId);
 
@@ -145,7 +156,10 @@ class UserProgressController extends AbstractController
     public function completeQuest(string $questId): JsonResponse
     {
         try {
-            $user = $this->getUser();
+            $user = $this->getAuthenticatedUserOr401Response();
+            if ($user instanceof JsonResponse) {
+                return $user;
+            }
             $userId = $user->getId();
             $questUuid = Uuid::fromString($questId);
 
