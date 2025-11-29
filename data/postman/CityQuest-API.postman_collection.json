@@ -1,1102 +1,1409 @@
 {
-	"info": {
-		"_postman_id": "cityquest-api-v1",
-		"name": "CityQuest API",
-		"description": "Complete API collection for CityQuest MVP - Urban Quest Game\n\n## Authentication\nThe API uses JWT (JSON Web Tokens) for authentication. After successful login or registration, you'll receive a token that should be included in the Authorization header for protected endpoints.\n\n## Base URL\n- Local: http://cityquest.test\n- Production: (to be configured)\n\n## Getting Started\n1. Register a new user\n2. Login to get JWT token\n3. Token will be automatically saved to environment variable\n4. Use protected endpoints with the token\n\n## Version\nAPI Version: 1.0.1\nLast Updated: 2025-10-26\n\n## New Features (v1.0.1)\n- User Profile Management\n- Public user profiles\n- Profile update functionality",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-		"_exporter_id": "cityquest"
-	},
-	"item": [
-		{
-			"name": "Authentication",
-			"item": [
-				{
-					"name": "Register New User",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"// Test response status",
-									"pm.test(\"Status code is 201\", function () {",
-									"    pm.response.to.have.status(201);",
-									"});",
-									"",
-									"// Test response structure",
-									"pm.test(\"Response has user data\", function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('user');",
-									"    pm.expect(jsonData.user).to.have.property('id');",
-									"    pm.expect(jsonData.user).to.have.property('email');",
-									"    pm.expect(jsonData.user).to.have.property('username');",
-									"    pm.expect(jsonData.user).to.have.property('roles');",
-									"    pm.expect(jsonData.user).to.have.property('createdAt');",
-									"});",
-									"",
-									"// Validate UUID format",
-									"pm.test(\"User ID is valid UUID\", function () {",
-									"    var jsonData = pm.response.json();",
-									"    var uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;",
-									"    pm.expect(jsonData.user.id).to.match(uuidRegex);",
-									"});",
-									"",
-									"// Validate default role",
-									"pm.test(\"User has default ROLE_USER\", function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.user.roles).to.include('ROLE_USER');",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"email\": \"{{user_email}}\",\n    \"password\": \"{{user_password}}\",\n    \"username\": \"{{user_username}}\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{base_url}}/api/auth/register",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"auth",
-								"register"
-							]
-						},
-						"description": "Register a new user account.\n\n**Request Body:**\n- `email` (string, required): Valid email address, max 255 characters\n- `password` (string, required): Minimum 8 characters\n- `username` (string, required): 3-50 characters, alphanumeric + underscore only\n\n**Success Response (201):**\n```json\n{\n  \"user\": {\n    \"id\": \"uuid\",\n    \"email\": \"user@example.com\",\n    \"username\": \"username\",\n    \"roles\": [\"ROLE_USER\"],\n    \"createdAt\": \"2025-10-25T12:00:00+00:00\"\n  }\n}\n```\n\n**Error Responses:**\n- `400` - Validation errors\n- `409` - Email or username already exists"
-					},
-					"response": [
-						{
-							"name": "Success - User Registered",
-							"originalRequest": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"email\": \"john.doe@example.com\",\n    \"password\": \"securePassword123\",\n    \"username\": \"johndoe\"\n}",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{base_url}}/api/auth/register",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"api",
-										"auth",
-										"register"
-									]
-								}
-							},
-							"status": "Created",
-							"code": 201,
-							"_postman_previewlanguage": "json",
-							"header": [
-								{
-									"key": "Content-Type",
-									"value": "application/json"
-								}
-							],
-							"cookie": [],
-							"body": "{\n    \"user\": {\n        \"id\": \"9d7f8a2b-3c4e-4f5a-8b6c-1d2e3f4a5b6c\",\n        \"email\": \"john.doe@example.com\",\n        \"username\": \"johndoe\",\n        \"roles\": [\"ROLE_USER\"],\n        \"createdAt\": \"2025-10-25T12:00:00+00:00\"\n    }\n}"
-						},
-						{
-							"name": "Error - Duplicate Email",
-							"originalRequest": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"email\": \"existing@example.com\",\n    \"password\": \"password123\",\n    \"username\": \"newuser\"\n}",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{base_url}}/api/auth/register",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"api",
-										"auth",
-										"register"
-									]
-								}
-							},
-							"status": "Conflict",
-							"code": 409,
-							"_postman_previewlanguage": "json",
-							"header": [
-								{
-									"key": "Content-Type",
-									"value": "application/json"
-								}
-							],
-							"cookie": [],
-							"body": "{\n    \"error\": \"User with email \\\"existing@example.com\\\" already exists\"\n}"
-						},
-						{
-							"name": "Error - Validation Failed",
-							"originalRequest": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"email\": \"invalid-email\",\n    \"password\": \"123\",\n    \"username\": \"a\"\n}",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{base_url}}/api/auth/register",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"api",
-										"auth",
-										"register"
-									]
-								}
-							},
-							"status": "Bad Request",
-							"code": 400,
-							"_postman_previewlanguage": "json",
-							"header": [
-								{
-									"key": "Content-Type",
-									"value": "application/json"
-								}
-							],
-							"cookie": [],
-							"body": "{\n    \"violations\": {\n        \"email\": \"Invalid email format\",\n        \"password\": \"This value is too short. It should have 8 characters or more.\",\n        \"username\": \"This value is too short. It should have 3 characters or more.\"\n    }\n}"
-						}
-					]
-				},
-				{
-					"name": "Login",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"// Test response status",
-									"pm.test(\"Status code is 200\", function () {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"// Test JWT token presence",
-									"pm.test(\"Response contains JWT token\", function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('token');",
-									"    pm.expect(jsonData.token).to.be.a('string');",
-									"    pm.expect(jsonData.token.length).to.be.greaterThan(0);",
-									"});",
-									"",
-									"// Save token to environment",
-									"if (pm.response.code === 200) {",
-									"    var jsonData = pm.response.json();",
-									"    pm.environment.set(\"jwt_token\", jsonData.token);",
-									"    console.log(\"JWT token saved to environment\");",
-									"}",
-									"",
-									"// Test user data",
-									"pm.test(\"Response contains user data\", function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('user');",
-									"    pm.expect(jsonData.user).to.have.property('email');",
-									"    pm.expect(jsonData.user).to.have.property('username');",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"username\": \"{{user_username}}\",\n    \"password\": \"{{user_password}}\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{base_url}}/api/auth/login",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"auth",
-								"login"
-							]
-						},
-						"description": "Authenticate user and receive JWT token.\n\n**Request Body:**\n- `username` (string, required): User's username\n- `password` (string, required): User's password\n\n**Success Response (200):**\n```json\n{\n  \"token\": \"eyJ0eXAiOiJKV1QiLCJhbGc...\",\n  \"user\": {\n    \"email\": \"user@example.com\",\n    \"username\": \"username\",\n    \"roles\": [\"ROLE_USER\"]\n  }\n}\n```\n\n**Error Responses:**\n- `401` - Invalid credentials\n\n**Note:** The JWT token is automatically saved to the `jwt_token` environment variable after successful login."
-					},
-					"response": [
-						{
-							"name": "Success - Login",
-							"originalRequest": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"username\": \"johndoe\",\n    \"password\": \"securePassword123\"\n}",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{base_url}}/api/auth/login",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"api",
-										"auth",
-										"login"
-									]
-								}
-							},
-							"status": "OK",
-							"code": 200,
-							"_postman_previewlanguage": "json",
-							"header": [
-								{
-									"key": "Content-Type",
-									"value": "application/json"
-								}
-							],
-							"cookie": [],
-							"body": "{\n    \"token\": \"eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpYXQiOjE2OTg1MTY4MDAsImV4cCI6MTY5ODUyMDQwMCwicm9sZXMiOlsiUk9MRV9VU0VSIl0sImVtYWlsIjoiam9obi5kb2VAZXhhbXBsZS5jb20ifQ.example_signature\",\n    \"user\": {\n        \"email\": \"john.doe@example.com\",\n        \"username\": \"johndoe\",\n        \"roles\": [\"ROLE_USER\"]\n    }\n}"
-						},
-						{
-							"name": "Error - Invalid Credentials",
-							"originalRequest": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"username\": \"johndoe\",\n    \"password\": \"wrongPassword\"\n}",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{base_url}}/api/auth/login",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"api",
-										"auth",
-										"login"
-									]
-								}
-							},
-							"status": "Unauthorized",
-							"code": 401,
-							"_postman_previewlanguage": "json",
-							"header": [
-								{
-									"key": "Content-Type",
-									"value": "application/json"
-								}
-							],
-							"cookie": [],
-							"body": "{\n    \"code\": 401,\n    \"message\": \"Invalid credentials.\"\n}"
-						}
-					]
-				},
-				{
-					"name": "Logout",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"// Test response status",
-									"pm.test(\"Status code is 204\", function () {",
-									"    pm.response.to.have.status(204);",
-									"});",
-									"",
-									"// Test empty response",
-									"pm.test(\"Response body is empty\", function () {",
-									"    pm.expect(pm.response.text()).to.equal('');",
-									"});",
-									"",
-									"// Clear JWT token from environment",
-									"pm.environment.unset(\"jwt_token\");",
-									"console.log(\"JWT token cleared from environment\");"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{jwt_token}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/api/auth/logout",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"auth",
-								"logout"
-							]
-						},
-						"description": "Logout user (client-side token removal).\n\nSince JWT is stateless, the server just acknowledges the logout request. The client is responsible for removing the token from storage.\n\n**Success Response (204):**\n- Empty body\n\n**Note:** The JWT token is automatically cleared from the environment after logout."
-					},
-					"response": [
-						{
-							"name": "Success - Logout",
-							"originalRequest": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Authorization",
-										"value": "Bearer eyJ0eXAiOiJKV1QiLCJhbGc..."
-									}
-								],
-								"url": {
-									"raw": "{{base_url}}/api/auth/logout",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"api",
-										"auth",
-										"logout"
-									]
-								}
-							},
-							"status": "No Content",
-							"code": 204,
-							"_postman_previewlanguage": "plain",
-							"header": [],
-							"cookie": [],
-							"body": ""
-						}
-					]
-				}
-			],
-			"description": "Authentication endpoints for user registration, login, and logout.\n\n## Authentication Flow\n1. Register a new user or use existing credentials\n2. Login to obtain JWT token\n3. Token is automatically saved to environment variable\n4. Use token for authenticated requests\n5. Logout to clear token from environment"
-		},
-		{
-			"name": "User Profile",
-			"item": [
-				{
-					"name": "Get My Profile",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"// Test response status",
-									"pm.test(\"Status code is 200\", function () {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"// Test response structure",
-									"pm.test(\"Response has profile data\", function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('id');",
-									"    pm.expect(jsonData).to.have.property('email');",
-									"    pm.expect(jsonData).to.have.property('username');",
-									"    pm.expect(jsonData).to.have.property('createdAt');",
-									"});",
-									"",
-									"// Validate UUID format",
-									"pm.test(\"User ID is valid UUID\", function () {",
-									"    var jsonData = pm.response.json();",
-									"    var uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;",
-									"    pm.expect(jsonData.id).to.match(uuidRegex);",
-									"});",
-									"",
-									"// Test email is present (private profile)",
-									"pm.test(\"Profile contains email (private)\", function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.email).to.be.a('string');",
-									"    pm.expect(jsonData.email).to.include('@');",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{jwt_token}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{base_url}}/api/user/profile",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"user",
-								"profile"
-							]
-						},
-						"description": "Get current user's profile (requires authentication).\n\n**Authentication:** JWT token required\n\n**Success Response (200):**\n```json\n{\n  \"id\": \"uuid\",\n  \"email\": \"user@example.com\",\n  \"username\": \"username\",\n  \"createdAt\": \"2025-10-26 12:00:00\"\n}\n```\n\n**Error Responses:**\n- `401` - Unauthorized (missing or invalid JWT token)\n\n**Note:** This endpoint returns the full profile including email address."
-					},
-					"response": [
-						{
-							"name": "Success - My Profile",
-							"originalRequest": {
-								"method": "GET",
-								"header": [
-									{
-										"key": "Authorization",
-										"value": "Bearer {{jwt_token}}"
-									}
-								],
-								"url": {
-									"raw": "{{base_url}}/api/user/profile",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"api",
-										"user",
-										"profile"
-									]
-								}
-							},
-							"status": "OK",
-							"code": 200,
-							"_postman_previewlanguage": "json",
-							"header": [
-								{
-									"key": "Content-Type",
-									"value": "application/json"
-								}
-							],
-							"cookie": [],
-							"body": "{\n    \"id\": \"9d7f8a2b-3c4e-4f5a-8b6c-1d2e3f4a5b6c\",\n    \"email\": \"john.doe@example.com\",\n    \"username\": \"johndoe\",\n    \"createdAt\": \"2025-10-26 12:00:00\"\n}"
-						},
-						{
-							"name": "Error - Unauthorized",
-							"originalRequest": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{base_url}}/api/user/profile",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"api",
-										"user",
-										"profile"
-									]
-								}
-							},
-							"status": "Unauthorized",
-							"code": 401,
-							"_postman_previewlanguage": "json",
-							"header": [
-								{
-									"key": "Content-Type",
-									"value": "application/json"
-								}
-							],
-							"cookie": [],
-							"body": "{\n    \"code\": 401,\n    \"message\": \"JWT Token not found\"\n}"
-						}
-					]
-				},
-				{
-					"name": "Get Public Profile",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"// Test response status",
-									"pm.test(\"Status code is 200\", function () {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"// Test response structure",
-									"pm.test(\"Response has public profile data\", function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('id');",
-									"    pm.expect(jsonData).to.have.property('username');",
-									"    pm.expect(jsonData).to.have.property('createdAt');",
-									"});",
-									"",
-									"// Test email is NOT present (public profile)",
-									"pm.test(\"Profile does not contain email (public)\", function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.not.have.property('email');",
-									"});",
-									"",
-									"// Validate UUID format",
-									"pm.test(\"User ID is valid UUID\", function () {",
-									"    var jsonData = pm.response.json();",
-									"    var uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;",
-									"    pm.expect(jsonData.id).to.match(uuidRegex);",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{base_url}}/api/users/{{public_username}}",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"users",
-								"{{public_username}}"
-							]
-						},
-						"description": "Get public profile of any user by username (no authentication required).\n\n**Authentication:** None required (public endpoint)\n\n**Path Parameters:**\n- `username` (string): Username of the user to get profile for\n\n**Success Response (200):**\n```json\n{\n  \"id\": \"uuid\",\n  \"username\": \"username\",\n  \"createdAt\": \"2025-10-26 12:00:00\"\n}\n```\n\n**Error Responses:**\n- `404` - User not found\n\n**Note:** This endpoint returns only public information (no email address). Useful for viewing profiles of quest authors."
-					},
-					"response": [
-						{
-							"name": "Success - Public Profile",
-							"originalRequest": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{base_url}}/api/users/johndoe",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"api",
-										"users",
-										"johndoe"
-									]
-								}
-							},
-							"status": "OK",
-							"code": 200,
-							"_postman_previewlanguage": "json",
-							"header": [
-								{
-									"key": "Content-Type",
-									"value": "application/json"
-								}
-							],
-							"cookie": [],
-							"body": "{\n    \"id\": \"9d7f8a2b-3c4e-4f5a-8b6c-1d2e3f4a5b6c\",\n    \"username\": \"johndoe\",\n    \"createdAt\": \"2025-10-26 12:00:00\"\n}"
-						},
-						{
-							"name": "Error - User Not Found",
-							"originalRequest": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{base_url}}/api/users/nonexistentuser",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"api",
-										"users",
-										"nonexistentuser"
-									]
-								}
-							},
-							"status": "Not Found",
-							"code": 404,
-							"_postman_previewlanguage": "json",
-							"header": [
-								{
-									"key": "Content-Type",
-									"value": "application/json"
-								}
-							],
-							"cookie": [],
-							"body": "{\n    \"error\": \"User with username \\\"nonexistentuser\\\" not found\"\n}"
-						}
-					]
-				},
-				{
-					"name": "Update My Profile",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"// Test response status",
-									"pm.test(\"Status code is 200\", function () {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"// Test response structure",
-									"pm.test(\"Response has success message and user data\", function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('message');",
-									"    pm.expect(jsonData).to.have.property('user');",
-									"    pm.expect(jsonData.user).to.have.property('id');",
-									"    pm.expect(jsonData.user).to.have.property('email');",
-									"    pm.expect(jsonData.user).to.have.property('username');",
-									"    pm.expect(jsonData.user).to.have.property('createdAt');",
-									"});",
-									"",
-									"// Test email was updated",
-									"pm.test(\"Email was updated\", function () {",
-									"    var jsonData = pm.response.json();",
-									"    var requestData = JSON.parse(pm.request.body.raw);",
-									"    if (requestData.email) {",
-									"        pm.expect(jsonData.user.email).to.equal(requestData.email);",
-									"    }",
-									"});",
-									"",
-									"// Test success message",
-									"pm.test(\"Success message is present\", function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.message).to.include('updated');",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{jwt_token}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "PATCH",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"email\": \"{{new_user_email}}\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{base_url}}/api/user/profile",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"user",
-								"profile"
-							]
-						},
-						"description": "Update current user's profile (requires authentication).\n\n**Authentication:** JWT token required\n\n**Request Body:**\n- `email` (string, optional): New email address (must be valid format and unique)\n\n**Success Response (200):**\n```json\n{\n  \"message\": \"Profile updated successfully\",\n  \"user\": {\n    \"id\": \"uuid\",\n    \"email\": \"newemail@example.com\",\n    \"username\": \"username\",\n    \"createdAt\": \"2025-10-26 12:00:00\"\n  }\n}\n```\n\n**Error Responses:**\n- `400` - Validation failed (invalid email format)\n- `401` - Unauthorized (missing or invalid JWT token)\n- `409` - Conflict (email already exists)\n\n**Note:** Username cannot be changed as it's used as the user identifier."
-					},
-					"response": [
-						{
-							"name": "Success - Profile Updated",
-							"originalRequest": {
-								"method": "PATCH",
-								"header": [
-									{
-										"key": "Authorization",
-										"value": "Bearer {{jwt_token}}"
-									},
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"email\": \"john.newemail@example.com\"\n}",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{base_url}}/api/user/profile",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"api",
-										"user",
-										"profile"
-									]
-								}
-							},
-							"status": "OK",
-							"code": 200,
-							"_postman_previewlanguage": "json",
-							"header": [
-								{
-									"key": "Content-Type",
-									"value": "application/json"
-								}
-							],
-							"cookie": [],
-							"body": "{\n    \"message\": \"Profile updated successfully\",\n    \"user\": {\n        \"id\": \"9d7f8a2b-3c4e-4f5a-8b6c-1d2e3f4a5b6c\",\n        \"email\": \"john.newemail@example.com\",\n        \"username\": \"johndoe\",\n        \"createdAt\": \"2025-10-26 12:00:00\"\n    }\n}"
-						},
-						{
-							"name": "Error - Duplicate Email",
-							"originalRequest": {
-								"method": "PATCH",
-								"header": [
-									{
-										"key": "Authorization",
-										"value": "Bearer {{jwt_token}}"
-									},
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"email\": \"existing@example.com\"\n}",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{base_url}}/api/user/profile",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"api",
-										"user",
-										"profile"
-									]
-								}
-							},
-							"status": "Conflict",
-							"code": 409,
-							"_postman_previewlanguage": "json",
-							"header": [
-								{
-									"key": "Content-Type",
-									"value": "application/json"
-								}
-							],
-							"cookie": [],
-							"body": "{\n    \"error\": \"User with email \\\"existing@example.com\\\" already exists\"\n}"
-						},
-						{
-							"name": "Error - Invalid Email",
-							"originalRequest": {
-								"method": "PATCH",
-								"header": [
-									{
-										"key": "Authorization",
-										"value": "Bearer {{jwt_token}}"
-									},
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"email\": \"invalid-email-format\"\n}",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{base_url}}/api/user/profile",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"api",
-										"user",
-										"profile"
-									]
-								}
-							},
-							"status": "Bad Request",
-							"code": 400,
-							"_postman_previewlanguage": "json",
-							"header": [
-								{
-									"key": "Content-Type",
-									"value": "application/json"
-								}
-							],
-							"cookie": [],
-							"body": "{\n    \"error\": \"Validation failed\",\n    \"violations\": {\n        \"email\": \"Invalid email format\"\n    }\n}"
-						},
-						{
-							"name": "Error - Unauthorized",
-							"originalRequest": {
-								"method": "PATCH",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"email\": \"newemail@example.com\"\n}",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{base_url}}/api/user/profile",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"api",
-										"user",
-										"profile"
-									]
-								}
-							},
-							"status": "Unauthorized",
-							"code": 401,
-							"_postman_previewlanguage": "json",
-							"header": [
-								{
-									"key": "Content-Type",
-									"value": "application/json"
-								}
-							],
-							"cookie": [],
-							"body": "{\n    \"code\": 401,\n    \"message\": \"JWT Token not found\"\n}"
-						}
-					]
-				}
-			],
-			"description": "User profile management endpoints.\n\n## Profile Features\n- View your own profile (with email)\n- View public profiles of other users (without email)\n- Update your email address\n- Username cannot be changed (used as identifier)\n\n## Security\n- Private endpoints require JWT authentication\n- Public profile endpoint is accessible without authentication\n- Email addresses are only visible in your own profile\n\n## Use Cases\n- User account management\n- Viewing quest author profiles\n- Profile updates and maintenance"
-		},
-		{
-			"name": "Health Check",
-			"item": [
-				{
-					"name": "Health Check",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"// Test response status",
-									"pm.test(\"Status code is 200\", function () {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"// Test response structure",
-									"pm.test(\"Response has status OK\", function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('status');",
-									"    pm.expect(jsonData.status).to.equal('OK');",
-									"});",
-									"",
-									"// Test response time",
-									"pm.test(\"Response time is less than 500ms\", function () {",
-									"    pm.expect(pm.response.responseTime).to.be.below(500);",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{base_url}}/health-check",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"health-check"
-							]
-						},
-						"description": "Check API health status.\n\n**Success Response (200):**\n```json\n{\n  \"status\": \"OK\"\n}\n```\n\nThis endpoint is useful for:\n- Monitoring\n- Load balancer health checks\n- Verifying API availability\n- CI/CD pipeline smoke tests"
-					},
-					"response": [
-						{
-							"name": "Success - Health OK",
-							"originalRequest": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{base_url}}/health-check",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"health-check"
-									]
-								}
-							},
-							"status": "OK",
-							"code": 200,
-							"_postman_previewlanguage": "json",
-							"header": [
-								{
-									"key": "Content-Type",
-									"value": "application/json"
-								}
-							],
-							"cookie": [],
-							"body": "{\n    \"status\": \"OK\"\n}"
-						}
-					]
-				}
-			],
-			"description": "Health check endpoint for monitoring and load balancer checks."
-		}
-	],
-	"auth": {
-		"type": "bearer",
-		"bearer": [
-			{
-				"key": "token",
-				"value": "{{jwt_token}}",
-				"type": "string"
-			}
-		]
-	},
-	"event": [
-		{
-			"listen": "prerequest",
-			"script": {
-				"type": "text/javascript",
-				"exec": [
-					"// Global pre-request script",
-					"console.log('Request to: ' + pm.request.url);"
-				]
-			}
-		},
-		{
-			"listen": "test",
-			"script": {
-				"type": "text/javascript",
-				"exec": [
-					"// Global test script",
-					"pm.test(\"Response time is acceptable\", function () {",
-					"    pm.expect(pm.response.responseTime).to.be.below(3000);",
-					"});",
-					"",
-					"pm.test(\"Content-Type header is present\", function () {",
-					"    pm.response.to.have.header(\"Content-Type\");",
-					"});"
-				]
-			}
-		}
-	],
-	"variable": [
-		{
-			"key": "base_url",
-			"value": "http://cityquest.test",
-			"type": "string"
-		}
-	]
+  "info": {
+    "_postman_id": "cityquest-api-v1",
+    "name": "CityQuest API",
+    "description": "Complete API collection for CityQuest MVP - Urban Quest Game\n\n## Authentication\nThe API uses JWT (JSON Web Tokens) for authentication. After successful login or registration, you'll receive a token that should be included in the Authorization header for protected endpoints.\n\n## Base URL\n- Local: http://cityquest.test\n- Production: (to be configured)\n\n## Getting Started\n1. Register a new user\n2. Login to get JWT token\n3. Token will be automatically saved to environment variable\n4. Use protected endpoints with the token\n\n## Version\nAPI Version: 1.1.0\nLast Updated: 2025-11-29\n\n## New Features (v1.1.0)\n- Quest list with filters, sorting, and pagination\n- Geosearch for nearby quests\n- Quest likes (toggle)\n- User quest progress tracking\n- Start/pause/complete quest functionality\n- Progress filtering by status and liked\n\n## Previous Features (v1.0.1)\n- User Profile Management\n- Public user profiles\n- Profile update functionality",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "cityquest"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register New User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Test response status",
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "// Test response structure",
+                  "pm.test(\"Response has user data\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('user');",
+                  "    pm.expect(jsonData.user).to.have.property('id');",
+                  "    pm.expect(jsonData.user).to.have.property('email');",
+                  "    pm.expect(jsonData.user).to.have.property('username');",
+                  "    pm.expect(jsonData.user).to.have.property('roles');",
+                  "    pm.expect(jsonData.user).to.have.property('createdAt');",
+                  "});",
+                  "",
+                  "// Validate UUID format",
+                  "pm.test(\"User ID is valid UUID\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    var uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;",
+                  "    pm.expect(jsonData.user.id).to.match(uuidRegex);",
+                  "});",
+                  "",
+                  "// Validate default role",
+                  "pm.test(\"User has default ROLE_USER\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.user.roles).to.include('ROLE_USER');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"{{user_email}}\",\n    \"password\": \"{{user_password}}\",\n    \"username\": \"{{user_username}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Register a new user account.\n\n**Request Body:**\n- `email` (string, required): Valid email address, max 255 characters\n- `password` (string, required): Minimum 8 characters\n- `username` (string, required): 3-50 characters, alphanumeric + underscore only\n\n**Success Response (201):**\n```json\n{\n  \"user\": {\n    \"id\": \"uuid\",\n    \"email\": \"user@example.com\",\n    \"username\": \"username\",\n    \"roles\": [\"ROLE_USER\"],\n    \"createdAt\": \"2025-10-25T12:00:00+00:00\"\n  }\n}\n```\n\n**Error Responses:**\n- `400` - Validation errors\n- `409` - Email or username already exists"
+          },
+          "response": [
+            {
+              "name": "Success - User Registered",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"email\": \"john.doe@example.com\",\n    \"password\": \"securePassword123\",\n    \"username\": \"johndoe\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/auth/register",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "register"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"user\": {\n        \"id\": \"9d7f8a2b-3c4e-4f5a-8b6c-1d2e3f4a5b6c\",\n        \"email\": \"john.doe@example.com\",\n        \"username\": \"johndoe\",\n        \"roles\": [\"ROLE_USER\"],\n        \"createdAt\": \"2025-10-25T12:00:00+00:00\"\n    }\n}"
+            },
+            {
+              "name": "Error - Duplicate Email",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"email\": \"existing@example.com\",\n    \"password\": \"password123\",\n    \"username\": \"newuser\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/auth/register",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "register"
+                  ]
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"error\": \"User with email \\\"existing@example.com\\\" already exists\"\n}"
+            },
+            {
+              "name": "Error - Validation Failed",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"email\": \"invalid-email\",\n    \"password\": \"123\",\n    \"username\": \"a\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/auth/register",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "register"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"violations\": {\n        \"email\": \"Invalid email format\",\n        \"password\": \"This value is too short. It should have 8 characters or more.\",\n        \"username\": \"This value is too short. It should have 3 characters or more.\"\n    }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Test response status",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// Test JWT token presence",
+                  "pm.test(\"Response contains JWT token\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('token');",
+                  "    pm.expect(jsonData.token).to.be.a('string');",
+                  "    pm.expect(jsonData.token.length).to.be.greaterThan(0);",
+                  "});",
+                  "",
+                  "// Save token to environment",
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set(\"jwt_token\", jsonData.token);",
+                  "    console.log(\"JWT token saved to environment\");",
+                  "}",
+                  "",
+                  "// Test user data",
+                  "pm.test(\"Response contains user data\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('user');",
+                  "    pm.expect(jsonData.user).to.have.property('email');",
+                  "    pm.expect(jsonData.user).to.have.property('username');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"username\": \"{{user_username}}\",\n    \"password\": \"{{user_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Authenticate user and receive JWT token.\n\n**Request Body:**\n- `username` (string, required): User's username\n- `password` (string, required): User's password\n\n**Success Response (200):**\n```json\n{\n  \"token\": \"eyJ0eXAiOiJKV1QiLCJhbGc...\",\n  \"user\": {\n    \"email\": \"user@example.com\",\n    \"username\": \"username\",\n    \"roles\": [\"ROLE_USER\"]\n  }\n}\n```\n\n**Error Responses:**\n- `401` - Invalid credentials\n\n**Note:** The JWT token is automatically saved to the `jwt_token` environment variable after successful login."
+          },
+          "response": [
+            {
+              "name": "Success - Login",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"username\": \"johndoe\",\n    \"password\": \"securePassword123\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/auth/login",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"token\": \"eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpYXQiOjE2OTg1MTY4MDAsImV4cCI6MTY5ODUyMDQwMCwicm9sZXMiOlsiUk9MRV9VU0VSIl0sImVtYWlsIjoiam9obi5kb2VAZXhhbXBsZS5jb20ifQ.example_signature\",\n    \"user\": {\n        \"email\": \"john.doe@example.com\",\n        \"username\": \"johndoe\",\n        \"roles\": [\"ROLE_USER\"]\n    }\n}"
+            },
+            {
+              "name": "Error - Invalid Credentials",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"username\": \"johndoe\",\n    \"password\": \"wrongPassword\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/auth/login",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"code\": 401,\n    \"message\": \"Invalid credentials.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Test response status",
+                  "pm.test(\"Status code is 204\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});",
+                  "",
+                  "// Test empty response",
+                  "pm.test(\"Response body is empty\", function () {",
+                  "    pm.expect(pm.response.text()).to.equal('');",
+                  "});",
+                  "",
+                  "// Clear JWT token from environment",
+                  "pm.environment.unset(\"jwt_token\");",
+                  "console.log(\"JWT token cleared from environment\");"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Logout user (client-side token removal).\n\nSince JWT is stateless, the server just acknowledges the logout request. The client is responsible for removing the token from storage.\n\n**Success Response (204):**\n- Empty body\n\n**Note:** The JWT token is automatically cleared from the environment after logout."
+          },
+          "response": [
+            {
+              "name": "Success - Logout",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer eyJ0eXAiOiJKV1QiLCJhbGc..."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/auth/logout",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "logout"
+                  ]
+                }
+              },
+              "status": "No Content",
+              "code": 204,
+              "_postman_previewlanguage": "plain",
+              "header": [],
+              "cookie": [],
+              "body": ""
+            }
+          ]
+        }
+      ],
+      "description": "Authentication endpoints for user registration, login, and logout.\n\n## Authentication Flow\n1. Register a new user or use existing credentials\n2. Login to obtain JWT token\n3. Token is automatically saved to environment variable\n4. Use token for authenticated requests\n5. Logout to clear token from environment"
+    },
+    {
+      "name": "User Profile",
+      "item": [
+        {
+          "name": "Get My Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Test response status",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// Test response structure",
+                  "pm.test(\"Response has profile data\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('email');",
+                  "    pm.expect(jsonData).to.have.property('username');",
+                  "    pm.expect(jsonData).to.have.property('createdAt');",
+                  "});",
+                  "",
+                  "// Validate UUID format",
+                  "pm.test(\"User ID is valid UUID\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    var uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;",
+                  "    pm.expect(jsonData.id).to.match(uuidRegex);",
+                  "});",
+                  "",
+                  "// Test email is present (private profile)",
+                  "pm.test(\"Profile contains email (private)\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.email).to.be.a('string');",
+                  "    pm.expect(jsonData.email).to.include('@');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/user/profile",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "profile"
+              ]
+            },
+            "description": "Get current user's profile (requires authentication).\n\n**Authentication:** JWT token required\n\n**Success Response (200):**\n```json\n{\n  \"id\": \"uuid\",\n  \"email\": \"user@example.com\",\n  \"username\": \"username\",\n  \"createdAt\": \"2025-10-26 12:00:00\"\n}\n```\n\n**Error Responses:**\n- `401` - Unauthorized (missing or invalid JWT token)\n\n**Note:** This endpoint returns the full profile including email address."
+          },
+          "response": [
+            {
+              "name": "Success - My Profile",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/user/profile",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "user",
+                    "profile"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"id\": \"9d7f8a2b-3c4e-4f5a-8b6c-1d2e3f4a5b6c\",\n    \"email\": \"john.doe@example.com\",\n    \"username\": \"johndoe\",\n    \"createdAt\": \"2025-10-26 12:00:00\"\n}"
+            },
+            {
+              "name": "Error - Unauthorized",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/user/profile",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "user",
+                    "profile"
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"code\": 401,\n    \"message\": \"JWT Token not found\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Public Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Test response status",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// Test response structure",
+                  "pm.test(\"Response has public profile data\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('username');",
+                  "    pm.expect(jsonData).to.have.property('createdAt');",
+                  "});",
+                  "",
+                  "// Test email is NOT present (public profile)",
+                  "pm.test(\"Profile does not contain email (public)\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.not.have.property('email');",
+                  "});",
+                  "",
+                  "// Validate UUID format",
+                  "pm.test(\"User ID is valid UUID\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    var uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;",
+                  "    pm.expect(jsonData.id).to.match(uuidRegex);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/users/{{public_username}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "{{public_username}}"
+              ]
+            },
+            "description": "Get public profile of any user by username (no authentication required).\n\n**Authentication:** None required (public endpoint)\n\n**Path Parameters:**\n- `username` (string): Username of the user to get profile for\n\n**Success Response (200):**\n```json\n{\n  \"id\": \"uuid\",\n  \"username\": \"username\",\n  \"createdAt\": \"2025-10-26 12:00:00\"\n}\n```\n\n**Error Responses:**\n- `404` - User not found\n\n**Note:** This endpoint returns only public information (no email address). Useful for viewing profiles of quest authors."
+          },
+          "response": [
+            {
+              "name": "Success - Public Profile",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/users/johndoe",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "johndoe"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"id\": \"9d7f8a2b-3c4e-4f5a-8b6c-1d2e3f4a5b6c\",\n    \"username\": \"johndoe\",\n    \"createdAt\": \"2025-10-26 12:00:00\"\n}"
+            },
+            {
+              "name": "Error - User Not Found",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/users/nonexistentuser",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "nonexistentuser"
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"error\": \"User with username \\\"nonexistentuser\\\" not found\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update My Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Test response status",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// Test response structure",
+                  "pm.test(\"Response has success message and user data\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "    pm.expect(jsonData).to.have.property('user');",
+                  "    pm.expect(jsonData.user).to.have.property('id');",
+                  "    pm.expect(jsonData.user).to.have.property('email');",
+                  "    pm.expect(jsonData.user).to.have.property('username');",
+                  "    pm.expect(jsonData.user).to.have.property('createdAt');",
+                  "});",
+                  "",
+                  "// Test email was updated",
+                  "pm.test(\"Email was updated\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    var requestData = JSON.parse(pm.request.body.raw);",
+                  "    if (requestData.email) {",
+                  "        pm.expect(jsonData.user.email).to.equal(requestData.email);",
+                  "    }",
+                  "});",
+                  "",
+                  "// Test success message",
+                  "pm.test(\"Success message is present\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.message).to.include('updated');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"{{new_user_email}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/user/profile",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "profile"
+              ]
+            },
+            "description": "Update current user's profile (requires authentication).\n\n**Authentication:** JWT token required\n\n**Request Body:**\n- `email` (string, optional): New email address (must be valid format and unique)\n\n**Success Response (200):**\n```json\n{\n  \"message\": \"Profile updated successfully\",\n  \"user\": {\n    \"id\": \"uuid\",\n    \"email\": \"newemail@example.com\",\n    \"username\": \"username\",\n    \"createdAt\": \"2025-10-26 12:00:00\"\n  }\n}\n```\n\n**Error Responses:**\n- `400` - Validation failed (invalid email format)\n- `401` - Unauthorized (missing or invalid JWT token)\n- `409` - Conflict (email already exists)\n\n**Note:** Username cannot be changed as it's used as the user identifier."
+          },
+          "response": [
+            {
+              "name": "Success - Profile Updated",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt_token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"email\": \"john.newemail@example.com\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/user/profile",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "user",
+                    "profile"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"message\": \"Profile updated successfully\",\n    \"user\": {\n        \"id\": \"9d7f8a2b-3c4e-4f5a-8b6c-1d2e3f4a5b6c\",\n        \"email\": \"john.newemail@example.com\",\n        \"username\": \"johndoe\",\n        \"createdAt\": \"2025-10-26 12:00:00\"\n    }\n}"
+            },
+            {
+              "name": "Error - Duplicate Email",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt_token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"email\": \"existing@example.com\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/user/profile",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "user",
+                    "profile"
+                  ]
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"error\": \"User with email \\\"existing@example.com\\\" already exists\"\n}"
+            },
+            {
+              "name": "Error - Invalid Email",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt_token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"email\": \"invalid-email-format\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/user/profile",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "user",
+                    "profile"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"error\": \"Validation failed\",\n    \"violations\": {\n        \"email\": \"Invalid email format\"\n    }\n}"
+            },
+            {
+              "name": "Error - Unauthorized",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"email\": \"newemail@example.com\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/user/profile",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "user",
+                    "profile"
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"code\": 401,\n    \"message\": \"JWT Token not found\"\n}"
+            }
+          ]
+        }
+      ],
+      "description": "User profile management endpoints.\n\n## Profile Features\n- View your own profile (with email)\n- View public profiles of other users (without email)\n- Update your email address\n- Username cannot be changed (used as identifier)\n\n## Security\n- Private endpoints require JWT authentication\n- Public profile endpoint is accessible without authentication\n- Email addresses are only visible in your own profile\n\n## Use Cases\n- User account management\n- Viewing quest author profiles\n- Profile updates and maintenance"
+    },
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Test response status",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// Test response structure",
+                  "pm.test(\"Response has status OK\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('status');",
+                  "    pm.expect(jsonData.status).to.equal('OK');",
+                  "});",
+                  "",
+                  "// Test response time",
+                  "pm.test(\"Response time is less than 500ms\", function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(500);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health-check",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "health-check"
+              ]
+            },
+            "description": "Check API health status.\n\n**Success Response (200):**\n```json\n{\n  \"status\": \"OK\"\n}\n```\n\nThis endpoint is useful for:\n- Monitoring\n- Load balancer health checks\n- Verifying API availability\n- CI/CD pipeline smoke tests"
+          },
+          "response": [
+            {
+              "name": "Success - Health OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/health-check",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "health-check"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"status\": \"OK\"\n}"
+            }
+          ]
+        }
+      ],
+      "description": "Health check endpoint for monitoring and load balancer checks."
+    },
+    {
+      "name": "Quests",
+      "item": [
+        {
+          "name": "Get Quest List",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/quests?city=Moscow&difficulty=easy&isPopular=true&sortBy=created&sortOrder=desc&limit=20&offset=0",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "quests"
+              ],
+              "query": [
+                {
+                  "key": "city",
+                  "value": "Moscow",
+                  "description": "Filter by city"
+                },
+                {
+                  "key": "difficulty",
+                  "value": "easy",
+                  "description": "Filter by difficulty (easy, medium, hard)"
+                },
+                {
+                  "key": "isPopular",
+                  "value": "true",
+                  "description": "Filter popular quests"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "created",
+                  "description": "Sort field (created, likes)"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "desc",
+                  "description": "Sort order (asc, desc)"
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Items per page (default: 20)"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Offset for pagination (default: 0)"
+                }
+              ]
+            },
+            "description": "Get paginated list of quests with optional filters and sorting.\n\n**Query Parameters (all optional):**\n- `city` (string): Filter by city name\n- `difficulty` (string): Filter by difficulty (easy, medium, hard)\n- `isPopular` (boolean): Filter popular quests\n- `sortBy` (string): Sort field (created, likes). Default: created\n- `sortOrder` (string): Sort order (asc, desc). Default: desc\n- `limit` (integer): Items per page. Default: 20, max: 100\n- `offset` (integer): Offset for pagination. Default: 0\n\n**Success Response (200):**\n```json\n{\n  \"data\": [\n    {\n      \"id\": \"uuid\",\n      \"title\": \"Quest Title\",\n      \"description\": \"Description\",\n      \"city\": \"Moscow\",\n      \"difficulty\": \"medium\",\n      \"durationMinutes\": 120,\n      \"distanceKm\": 5.5,\n      \"imageUrl\": \"https://...\",\n      \"author\": \"Author Name\",\n      \"likesCount\": 42,\n      \"isPopular\": true,\n      \"latitude\": 55.7558,\n      \"longitude\": 37.6173,\n      \"createdAt\": \"2025-11-29T12:00:00+00:00\",\n      \"updatedAt\": \"2025-11-29T12:00:00+00:00\"\n    }\n  ],\n  \"meta\": {\n    \"total\": 150,\n    \"limit\": 20,\n    \"offset\": 0\n  }\n}\n```"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Nearby Quests",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/quests/nearby?lat=55.7558&lng=37.6173&radius=10&limit=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "quests",
+                "nearby"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "55.7558",
+                  "description": "Latitude (required)"
+                },
+                {
+                  "key": "lng",
+                  "value": "37.6173",
+                  "description": "Longitude (required)"
+                },
+                {
+                  "key": "radius",
+                  "value": "10",
+                  "description": "Search radius in km (default: 10)"
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Max results (default: 20)"
+                }
+              ]
+            },
+            "description": "Find quests near specified location using geosearch.\n\n**Query Parameters:**\n- `lat` (float, required): Latitude\n- `lng` (float, required): Longitude\n- `radius` (float): Search radius in kilometers. Default: 10\n- `limit` (integer): Maximum results. Default: 20\n\n**Success Response (200):**\n```json\n{\n  \"data\": [\n    {\n      \"id\": \"uuid\",\n      \"title\": \"Quest Title\",\n      \"city\": \"Moscow\",\n      \"latitude\": 55.7558,\n      \"longitude\": 37.6173,\n      \"distance\": 2.5\n    }\n  ],\n  \"meta\": {\n    \"latitude\": 55.7558,\n    \"longitude\": 37.6173,\n    \"radius\": 10,\n    \"count\": 5\n  }\n}\n```\n\n**Error Responses:**\n- `400` - Missing required parameters (lat, lng)"
+          },
+          "response": []
+        },
+        {
+          "name": "Toggle Quest Like",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/quests/:questId/like",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "quests",
+                ":questId",
+                "like"
+              ],
+              "variable": [
+                {
+                  "key": "questId",
+                  "value": "{{quest_id}}",
+                  "description": "Quest UUID"
+                }
+              ]
+            },
+            "description": "Toggle like status for a quest. If liked - unlikes, if not liked - likes.\n\n**Authentication:** Required (JWT)\n\n**Path Parameters:**\n- `questId` (UUID, required): Quest ID\n\n**Success Response (200):**\n```json\n{\n  \"message\": \"Quest like toggled successfully\",\n  \"data\": {\n    \"questId\": \"uuid\",\n    \"liked\": true,\n    \"likesCount\": 43\n  }\n}\n```\n\n**Error Responses:**\n- `401` - Unauthorized (missing or invalid token)\n- `404` - Quest not found"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "User Progress",
+      "item": [
+        {
+          "name": "Get User Progress",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/user/progress?status=active&liked=true",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "progress"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "active",
+                  "description": "Filter by status (active, paused, completed)",
+                  "disabled": true
+                },
+                {
+                  "key": "liked",
+                  "value": "true",
+                  "description": "Filter liked quests",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Get current user's quest progress with optional filters.\n\n**Authentication:** Required (JWT)\n\n**Query Parameters (all optional):**\n- `status` (string): Filter by status (active, paused, completed)\n- `liked` (boolean): Filter liked quests\n\n**Success Response (200):**\n```json\n{\n  \"data\": [\n    {\n      \"id\": \"uuid\",\n      \"questId\": \"uuid\",\n      \"questTitle\": \"Quest Title\",\n      \"status\": \"active\",\n      \"isLiked\": true,\n      \"completedAt\": null,\n      \"createdAt\": \"2025-11-29T12:00:00+00:00\",\n      \"updatedAt\": \"2025-11-29T12:00:00+00:00\"\n    }\n  ],\n  \"meta\": {\n    \"total\": 5,\n    \"in_progress\": 1,\n    \"paused\": 2,\n    \"completed\": 2\n  }\n}\n```"
+          },
+          "response": []
+        },
+        {
+          "name": "Start Quest",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/user/progress/:questId/start",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "progress",
+                ":questId",
+                "start"
+              ],
+              "variable": [
+                {
+                  "key": "questId",
+                  "value": "{{quest_id}}",
+                  "description": "Quest UUID"
+                }
+              ]
+            },
+            "description": "Start or resume a quest. If quest was paused, it will be resumed.\n\n**Authentication:** Required (JWT)\n\n**Path Parameters:**\n- `questId` (UUID, required): Quest ID\n\n**Business Rules:**\n- Only ONE active quest allowed at a time\n- If another quest is active, returns 409 Conflict\n- Can resume a paused quest\n\n**Success Response (201):**\n```json\n{\n  \"message\": \"Quest started successfully\",\n  \"data\": {\n    \"id\": \"uuid\",\n    \"questId\": \"uuid\",\n    \"status\": \"active\",\n    \"createdAt\": \"2025-11-29T12:00:00+00:00\"\n  }\n}\n```\n\n**Error Responses:**\n- `401` - Unauthorized\n- `404` - Quest not found\n- `409` - Conflict: Another quest is already active"
+          },
+          "response": []
+        },
+        {
+          "name": "Pause Quest",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/user/progress/:questId/pause",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "progress",
+                ":questId",
+                "pause"
+              ],
+              "variable": [
+                {
+                  "key": "questId",
+                  "value": "{{quest_id}}",
+                  "description": "Quest UUID"
+                }
+              ]
+            },
+            "description": "Pause an active quest to start another one.\n\n**Authentication:** Required (JWT)\n\n**Path Parameters:**\n- `questId` (UUID, required): Quest ID\n\n**Success Response (200):**\n```json\n{\n  \"message\": \"Quest paused successfully\",\n  \"data\": {\n    \"id\": \"uuid\",\n    \"questId\": \"uuid\",\n    \"status\": \"paused\",\n    \"updatedAt\": \"2025-11-29T12:00:00+00:00\"\n  }\n}\n```\n\n**Error Responses:**\n- `401` - Unauthorized\n- `404` - Quest progress not found\n- `400` - Cannot pause quest (invalid status)"
+          },
+          "response": []
+        },
+        {
+          "name": "Complete Quest",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/user/progress/:questId/complete",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "progress",
+                ":questId",
+                "complete"
+              ],
+              "variable": [
+                {
+                  "key": "questId",
+                  "value": "{{quest_id}}",
+                  "description": "Quest UUID"
+                }
+              ]
+            },
+            "description": "Mark quest as completed.\n\n**Authentication:** Required (JWT)\n\n**Path Parameters:**\n- `questId` (UUID, required): Quest ID\n\n**Success Response (200):**\n```json\n{\n  \"message\": \"Quest completed successfully\",\n  \"data\": {\n    \"id\": \"uuid\",\n    \"questId\": \"uuid\",\n    \"status\": \"completed\",\n    \"completedAt\": \"2025-11-29T12:00:00+00:00\",\n    \"updatedAt\": \"2025-11-29T12:00:00+00:00\"\n  }\n}\n```\n\n**Error Responses:**\n- `401` - Unauthorized\n- `404` - Quest progress not found\n- `400` - Cannot complete quest (invalid status)"
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwt_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Global pre-request script",
+          "console.log('Request to: ' + pm.request.url);"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Global test script",
+          "pm.test(\"Response time is acceptable\", function () {",
+          "    pm.expect(pm.response.responseTime).to.be.below(3000);",
+          "});",
+          "",
+          "pm.test(\"Content-Type header is present\", function () {",
+          "    pm.response.to.have.header(\"Content-Type\");",
+          "});"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://cityquest.test",
+      "type": "string"
+    }
+  ]
 }

@@ -71,13 +71,20 @@
    id INTEGER PRIMARY KEY AUTOINCREMENT,
    user_id TEXT NOT NULL,
    quest_id INTEGER NOT NULL,
-   is_completed BOOLEAN DEFAULT FALSE,
+   status VARCHAR(20) DEFAULT 'active' NOT NULL,  -- 'active', 'paused', 'completed'
    is_liked BOOLEAN DEFAULT FALSE,
    completed_at TIMESTAMP,
    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
    UNIQUE(user_id, quest_id)
    ```
+   
+   **Бизнес-правила:**
+   - У пользователя может быть только **один активный квест** одновременно (status = 'active')
+   - Квесты можно ставить на паузу (status = 'paused') для прохождения других квестов
+   - При старте нового квеста необходимо проверять наличие активных квестов (status = 'active')
+   - Завершенные квесты (status = 'completed') не учитываются в лимите
+   - Квестов на паузе (status = 'paused') может быть неограниченное количество
 
 ### **2.3. Public API Endpoints**
 
@@ -105,9 +112,34 @@
 
 #### **Требующие авторизации**
 - `POST /api/quests/{id}/like` - Поставить/убрать лайк (обновляет is_liked в user_quest_progress)
+
 - `GET /api/user/progress` - Прогресс пользователя (список записей из user_quest_progress)
-- `POST /api/user/progress/{questId}/start` - Начать квест (создает запись в user_quest_progress)
-- `PATCH /api/user/progress/{questId}/complete` - Завершить квест (is_completed = true, completed_at = now)
+  - Параметры:
+    - `status=completed` - только завершенные квесты (status = 'completed')
+    - `status=active` - только активный квест (status = 'active')
+    - `status=paused` - только квесты на паузе (status = 'paused')
+    - `liked=true` - только квесты с лайками (is_liked = true)
+
+- `POST /api/user/progress/{questId}/start` - Начать квест
+  - Создает запись в user_quest_progress с status = 'active'
+  - **Обязательная валидация:**
+    - Проверить наличие активного квеста: `SELECT * FROM user_quest_progress WHERE user_id = :userId AND status = 'active'`
+    - Если найден активный квест → вернуть `409 Conflict` с сообщением "You already have an active quest. Pause it before starting a new one."
+    - Если активного квеста нет → создать новую запись или обновить существующую паузированную на status = 'active'
+
+- `PATCH /api/user/progress/{questId}/pause` - Поставить квест на паузу
+  - Обновляет status с 'active' на 'paused'
+  - **Валидация:**
+    - Квест должен существовать в user_quest_progress для данного пользователя
+    - Квест должен иметь status = 'active' (нельзя поставить на паузу завершенный или уже паузированный)
+    - Если status != 'active' → вернуть `400 Bad Request` с сообщением "Only active quests can be paused"
+   
+- `PATCH /api/user/progress/{questId}/complete` - Завершить квест
+  - Обновляет status на 'completed', устанавливает completed_at = now
+  - **Валидация:**
+    - Квест должен существовать в user_quest_progress для данного пользователя
+    - Квест должен иметь status = 'active' (нельзя завершить паузированный или уже завершенный)
+    - Если status != 'active' → вернуть `400 Bad Request` с сообщением "Only active quests can be completed"
 
 ### **2.4. Staff API Endpoints**
 
