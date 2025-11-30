@@ -3,12 +3,12 @@
 ## 📋 Метаданные
 
 - **Название:** CityQuest API
-- **Версия:** 1.0.1
+- **Версия:** 1.1.0
 - **Дата создания:** 2025-10-25
-- **Последнее обновление:** 2025-10-26
+- **Последнее обновление:** 2025-11-29
 - **Формат:** Postman Collection v2.1.0
-- **Всего endpoints:** 7
-- **Всего тестов:** 40+ автоматических проверок
+- **Всего endpoints:** 15
+- **Всего тестов:** 44+ автоматических проверок
 
 ## 📊 Статистика
 
@@ -18,8 +18,10 @@
 |-----------|------------|--------|
 | Authentication | 3 | POST |
 | User Profile | 3 | GET, PATCH |
+| Quests | 4 | GET (list, nearby, by ID), POST (like) |
+| User Progress | 4 | GET (progress), POST (start), PATCH (pause, complete) |
 | Health Check | 1 | GET |
-| **Всего** | **7** | - |
+| **Всего** | **15** | - |
 
 ### Покрытие тестами
 
@@ -31,8 +33,16 @@
 | Get My Profile | 4 теста | 2 примера |
 | Get Public Profile | 4 теста | 2 примера |
 | Update Profile | 4 теста | 4 примера |
+| Get Quest by ID | 4 теста | 3 примера |
+| Get Quest List | - | - |
+| Get Nearby Quests | - | - |
+| Toggle Quest Like | - | - |
+| Get User Progress | - | - |
+| Start Quest | - | - |
+| Pause Quest | - | - |
+| Complete Quest | - | - |
 | Health Check | 3 теста | 1 пример |
-| **Всего** | **26+ тестов** | **15 примеров** |
+| **Всего** | **30+ тестов** | **18 примеров** |
 
 ### Глобальные тесты
 - Response time check (все запросы)
@@ -81,6 +91,7 @@
 - `user_password` - testPassword123
 - `user_username` - testuser
 - `jwt_token` - (auto-managed)
+- `quest_id` - 550e8400-e29b-41d4-a716-446655440000
 
 **Environment-level (Production):**
 - `base_url` - https://api.cityquest.com
@@ -88,6 +99,7 @@
 - `user_password` - (empty, secret)
 - `user_username` - (empty, fill manually)
 - `jwt_token` - (auto-managed)
+- `quest_id` - (empty, fill manually)
 
 ### Scripts
 
@@ -212,6 +224,64 @@ data/postman/
 5. Создайте Pull Request
 
 ## 📋 Changelog
+
+### v1.1.0 (2025-11-29)
+**Новые возможности:**
+- ✅ **Quest Lists API** - получение списков квестов с фильтрацией и сортировкой
+- ✅ **Geosearch API** - поиск квестов по геолокации (Haversine formula)
+- ✅ **Quest Likes** - система лайков квестов (toggle mechanism)
+- ✅ **User Progress API** - полное управление прогрессом пользователя
+- ✅ **Quest Status Management** - старт/пауза/завершение квестов
+- ✅ 7 новых endpoints (+4 Quest, +4 User Progress, -1 перемещен)
+- ✅ Бизнес-правило: только 1 активный квест одновременно (409 Conflict)
+
+**API Endpoints:**
+
+*Публичные (без JWT):*
+- GET /api/quests - список квестов (фильтры: city, difficulty, isPopular | сортировка: created, likes | пагинация: limit, offset)
+- GET /api/quests/nearby - геопоиск (параметры: lat, lng, radius)
+
+*Приватные (требуют JWT):*
+- POST /api/quests/{id}/like - toggle лайк
+- GET /api/user/progress - прогресс пользователя (фильтры: status, liked)
+- POST /api/user/progress/{questId}/start - начать/возобновить квест
+- PATCH /api/user/progress/{questId}/pause - поставить на паузу
+- PATCH /api/user/progress/{questId}/complete - завершить квест
+
+**Технические улучшения:**
+- Database migration: таблица `user_quest_progress` (status: active/paused/completed)
+- Геолокация: добавлены поля latitude/longitude в таблицу quests
+- Domain: новый UserProgress domain (Entity, ValueObject, Exceptions, Repository)
+- Quest Domain: расширен для списков и геопоиска
+- PHP 8.1 Enum: QuestStatus для type-safe управления статусами
+- 3 новых Application Services
+- 75 tests, 264 assertions - ALL PASSED ✅
+
+**Архитектура:**
+- DDD структура для UserProgress домена
+- Repository pattern с фильтрацией и геопоиском
+- Domain exceptions для бизнес-правил (ActiveQuestExistsException, InvalidQuestStatusException, ProgressNotFoundException)
+- Comprehensive тестирование (unit + integration)
+
+### v1.0.2 (2025-11-29)
+**Новые возможности:**
+- ✅ **Quest Data API** - базовый endpoint для получения данных квестов
+- ✅ **Get Quest by ID** - получение квеста по UUID (публичный endpoint)
+- ✅ Добавлена переменная окружения: `quest_id`
+- ✅ 4 новых автоматических теста
+- ✅ 3 новых примера ответов (success, not found, invalid UUID)
+
+**Технические улучшения:**
+- Публичный доступ к Quest API (без JWT аутентификации)
+- UUID валидация с корректными error messages
+- Полная обработка ошибок (400, 404, 500)
+- Автоматические тесты для всех сценариев
+
+**Архитектура:**
+- DDD структура для Quest домена
+- Repository pattern с интерфейсами
+- Domain exceptions для бизнес-логики
+- Comprehensive тестирование (unit + integration)
 
 ### v1.0.1 (2025-10-26)
 **Новые возможности:**

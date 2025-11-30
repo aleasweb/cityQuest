@@ -25,6 +25,12 @@ services:
     App\HealthCheck\:
         resource: '../src/HealthCheck/*'
         exclude: '../src/HealthCheck/{Tests,Kernel.php}'
+    App\Quest\:
+        resource: '../src/Quest/*'
+        exclude: '../src/Quest/{Domain/Entity,Tests,Kernel.php}'
+    App\UserProgress\:
+        resource: '../src/UserProgress/*'
+        exclude: '../src/UserProgress/{Domain/Entity,Domain/ValueObject,Tests,Kernel.php}'
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
@@ -32,3 +38,11 @@ services:
     # User Repository binding
     App\User\Domain\Repository\UserRepositoryInterface:
         class: App\User\Infrastructure\Db\DoctrineUserRepository
+    
+    # Quest Repository binding
+    App\Quest\Domain\Repository\QuestRepositoryInterface:
+        class: App\Quest\Infrastructure\Db\DoctrineQuestRepository
+    
+    # UserProgress Repository binding
+    App\UserProgress\Domain\Repository\UserQuestProgressRepositoryInterface:
+        class: App\UserProgress\Infrastructure\Persistence\DoctrineUserQuestProgressRepository

@@ -41,6 +41,7 @@ Environment переменные уже настроены для локальн
 - `jwt_token`: (автоматически заполняется после логина)
 - `public_username`: testuser (для тестирования публичных профилей)
 - `new_user_email`: updated@example.com (для тестирования обновления профиля)
+- `quest_id`: 550e8400-e29b-41d4-a716-446655440000 (для тестирования Quest API)
 
 ## 📚 Структура коллекции
 
@@ -192,6 +193,246 @@ Environment переменные уже настроены для локальн
 - `401` - Отсутствует JWT токен
 - `404` - Пользователь не найден (для публичного профиля)
 - `409` - Email уже занят
+
+
+### Quests
+
+#### 1. Get Quest List
+- **Method:** GET
+- **Endpoint:** `/api/quests`
+- **Auth:** None (Public)
+- **Query Parameters (все опциональны):**
+  - `city` (string) - Фильтр по городу
+  - `difficulty` (string) - Фильтр по сложности (easy, medium, hard)
+  - `isPopular` (boolean) - Только популярные квесты
+  - `sortBy` (string) - Поле сортировки (created, likes). Default: created
+  - `sortOrder` (string) - Порядок сортировки (asc, desc). Default: desc
+  - `limit` (integer) - Кол-во на страницу (max: 100). Default: 20
+  - `offset` (integer) - Смещение для пагинации. Default: 0
+- **Response (200):**
+  ```json
+  {
+    "data": [
+      {
+        "id": "uuid",
+        "title": "Quest Title",
+        "description": "Description",
+        "city": "Moscow",
+        "difficulty": "medium",
+        "durationMinutes": 120,
+        "distanceKm": 5.5,
+        "imageUrl": "https://...",
+        "author": "Author Name",
+        "likesCount": 42,
+        "isPopular": true,
+        "latitude": 55.7558,
+        "longitude": 37.6173,
+        "createdAt": "2025-11-29T12:00:00+00:00",
+        "updatedAt": "2025-11-29T12:00:00+00:00"
+      }
+    ],
+    "meta": {
+      "total": 150,
+      "limit": 20,
+      "offset": 0
+    }
+  }
+  ```
+
+**Фичи:**
+- ✅ Фильтрация по городу, сложности, популярности
+- ✅ Сортировка по дате создания или количеству лайков
+- ✅ Пагинация (offset-based)
+- ✅ Публичный доступ (без авторизации)
+
+#### 2. Get Nearby Quests
+- **Method:** GET
+- **Endpoint:** `/api/quests/nearby`
+- **Auth:** None (Public)
+- **Query Parameters:**
+  - `lat` (float, required) - Широта
+  - `lng` (float, required) - Долгота
+  - `radius` (float) - Радиус поиска в км. Default: 10
+  - `limit` (integer) - Максимум результатов. Default: 20
+- **Response (200):**
+  ```json
+  {
+    "data": [
+      {
+        "id": "uuid",
+        "title": "Quest Title",
+        "city": "Moscow",
+        "latitude": 55.7558,
+        "longitude": 37.6173,
+        "distance": 2.5
+      }
+    ],
+    "meta": {
+      "latitude": 55.7558,
+      "longitude": 37.6173,
+      "radius": 10,
+      "count": 5
+    }
+  }
+  ```
+- **Error (400):**
+  ```json
+  {
+    "error": "Latitude (lat) and longitude (lng) parameters are required"
+  }
+  ```
+
+**Фичи:**
+- ✅ Геопоиск с использованием Haversine формулы
+- ✅ Настраиваемый радиус поиска
+- ✅ Сортировка по расстоянию (ближайшие первыми)
+- ✅ Публичный доступ
+
+#### 3. Toggle Quest Like
+- **Method:** POST
+- **Endpoint:** `/api/quests/:questId/like`
+- **Auth:** Bearer Token (Required)
+- **Path Parameters:**
+  - `questId` (UUID) - ID квеста
+- **Response (200):**
+  ```json
+  {
+    "message": "Quest like toggled successfully",
+    "data": {
+      "questId": "uuid",
+      "liked": true,
+      "likesCount": 43
+    }
+  }
+  ```
+- **Errors:**
+  - 401 - Unauthorized (нет или невалидный токен)
+  - 404 - Quest not found
+
+**Фичи:**
+- ✅ Toggle механизм (like/unlike)
+- ✅ Автоматическое обновление счетчика лайков
+- ✅ Создание progress записи если не существует
+- ✅ Требуется авторизация
+
+### User Progress
+
+#### 1. Get User Progress
+- **Method:** GET
+- **Endpoint:** `/api/user/progress`
+- **Auth:** Bearer Token (Required)
+- **Query Parameters (опциональны):**
+  - `status` (string) - Фильтр по статусу (active, paused, completed)
+  - `liked` (boolean) - Только квесты с лайками
+- **Response (200):**
+  ```json
+  {
+    "data": [
+      {
+        "id": "uuid",
+        "questId": "uuid",
+        "questTitle": "Quest Title",
+        "status": "active",
+        "isLiked": true,
+        "completedAt": null,
+        "createdAt": "2025-11-29T12:00:00+00:00",
+        "updatedAt": "2025-11-29T12:00:00+00:00"
+      }
+    ],
+    "meta": {
+      "total": 5,
+      "in_progress": 1,
+      "paused": 2,
+      "completed": 2
+    }
+  }
+  ```
+
+**Фичи:**
+- ✅ Просмотр всех квестов пользователя
+- ✅ Фильтрация по статусу (active/paused/completed)
+- ✅ Фильтрация по лайкам
+- ✅ Метаданные с подсчетом по статусам
+
+#### 2. Start Quest
+- **Method:** POST
+- **Endpoint:** `/api/user/progress/:questId/start`
+- **Auth:** Bearer Token (Required)
+- **Path Parameters:**
+  - `questId` (UUID) - ID квеста
+- **Response (201):**
+  ```json
+  {
+    "message": "Quest started successfully",
+    "data": {
+      "id": "uuid",
+      "questId": "uuid",
+      "status": "active",
+      "createdAt": "2025-11-29T12:00:00+00:00"
+    }
+  }
+  ```
+- **Error (409 Conflict):**
+  ```json
+  {
+    "error": "User already has an active quest. Pause it before starting a new one."
+  }
+  ```
+
+**Бизнес-правила:**
+- ⚠️ **Только ОДИН активный квест одновременно**
+- ✅ Возобновление из паузы (если квест был на паузе)
+- ❌ 409 Conflict если есть другой активный квест
+- ✅ Создание новой progress записи
+
+#### 3. Pause Quest
+- **Method:** PATCH
+- **Endpoint:** `/api/user/progress/:questId/pause`
+- **Auth:** Bearer Token (Required)
+- **Path Parameters:**
+  - `questId` (UUID) - ID квеста
+- **Response (200):**
+  ```json
+  {
+    "message": "Quest paused successfully",
+    "data": {
+      "id": "uuid",
+      "questId": "uuid",
+      "status": "paused",
+      "updatedAt": "2025-11-29T12:00:00+00:00"
+    }
+  }
+  ```
+
+**Фичи:**
+- ✅ Приостановка активного квеста
+- ✅ Позволяет начать другой квест
+- ✅ Можно возобновить позже через Start Quest
+
+#### 4. Complete Quest
+- **Method:** PATCH
+- **Endpoint:** `/api/user/progress/:questId/complete`
+- **Auth:** Bearer Token (Required)
+- **Path Parameters:**
+  - `questId` (UUID) - ID квеста
+- **Response (200):**
+  ```json
+  {
+    "message": "Quest completed successfully",
+    "data": {
+      "id": "uuid",
+      "questId": "uuid",
+      "status": "completed",
+      "completedAt": "2025-11-29T12:00:00+00:00",
+      "updatedAt": "2025-11-29T12:00:00+00:00"
+    }
+  }
+  ```
+
+**Фичи:**
+- ✅ Завершение активного квеста
+- ✅ Проставление completedAt timestamp
+- ✅ Необратимое действие (нельзя вернуть в active)
 
 ### Health Check
 
@@ -464,26 +705,73 @@ jobs:
 - ✅ Global authentication
 - ✅ Collection variables
 
+## 🗺️ Quests
+
+### Get Quest by ID
+**Endpoint:** `GET /api/quests/{id}`  
+**Authentication:** None (Public endpoint)  
+**Description:** Получить данные конкретного квеста по его UUID
+
+**Path Parameters:**
+- `id` (string, UUID) - Уникальный идентификатор квеста
+
+**Response (200):**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "title": "Исторический центр Москвы",
+  "description": "Увлекательная прогулка по историческим местам столицы",
+  "city": "Москва",
+  "difficulty": "medium",
+  "durationMinutes": 120,
+  "distanceKm": 5.5,
+  "imageUrl": "https://example.com/quest.jpg",
+  "author": "Иван Иванов",
+  "likesCount": 42,
+  "isPopular": true,
+  "createdAt": "2025-11-29 10:00:00",
+  "updatedAt": "2025-11-29 10:00:00"
+}
+```
+
+**Error Responses:**
+- `400` - Invalid quest ID format
+- `404` - Quest not found
+
+**Automated Tests:**
+- ✅ Response status is 200
+- ✅ Response structure validation
+- ✅ UUID format validation
+- ✅ Required fields presence
+- ✅ Data types validation
+
 ## 🎯 Следующие шаги
 
-После успешного тестирования Authentication endpoints, будут добавлены:
+После успешного тестирования Quest Lists и User Progress API, будут добавлены:
 
-1. **User Profile Endpoints** (CQST-002)
-   - GET /api/users/me
-   - PATCH /api/users/me
-   - DELETE /api/users/me
+1. **Achievement Endpoints**
+   - User achievements system
+   - Progress tracking badges
+   - Leaderboards
 
-2. **Quest Endpoints** (CQST-003)
-   - CRUD operations for quests
-   - Quest progress tracking
+2. **Quest Details Enhancement**
+   - Quest steps/checkpoints
+   - Quest photos upload
+   - Quest reviews and ratings
 
-3. **Achievement Endpoints**
-   - User achievements
-   - Progress tracking
+3. **Social Features**
+   - User following
+   - Quest sharing
+   - Activity feed
 
 ---
 
-**Версия:** 1.0.0  
+**Версия:** 1.1.0  
 **Дата создания:** 2025-10-25  
-**Последнее обновление:** 2025-10-25  
+**Последнее обновление:** 2025-11-29  
 **Maintainer:** CityQuest Development Team
+
+**Changelog:**
+- **v1.1.0** (2025-11-29): Quest Lists, Geosearch, Likes, User Progress (CQST-005)
+- **v1.0.1** (2025-10-26): User Profile Management (CQST-003)
+- **v1.0.0** (2025-10-25): Authentication, Basic Quest API

@@ -37,9 +37,7 @@
     },
     "autoload": {
         "psr-4": {
-            "App\\": "src/",
-            "App\\User\\": "src/User/",
-            "App\\HealthCheck\\": "src/HealthCheck/"
+            "App\\": "src/"
         }
     },
     "autoload-dev": {

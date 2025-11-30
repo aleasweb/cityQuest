@@ -26,6 +26,13 @@ security:
             stateless: true
             security: false
         
+        # Public quests GET endpoints only (GET /api/quests, GET /api/quests/nearby, GET /api/quests/{id})
+        api_quests_public:
+            pattern: ^/api/quests
+            methods: [GET]
+            stateless: true
+            security: false
+        
         # JWT Login endpoint
         api_login:
             pattern: ^/api/auth/login
