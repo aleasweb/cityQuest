@@ -1,0 +1,17 @@
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Копировать package файлы
+COPY package*.json ./
+
+# Установить зависимости
+RUN npm install
+
+# Копировать исходники
+COPY . .
+
+# Собрать
+RUN npm run build
+
+# Результат в /app/dist

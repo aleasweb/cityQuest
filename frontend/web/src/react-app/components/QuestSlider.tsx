@@ -47,17 +47,16 @@ export default function QuestSlider({ quests, onQuestClick }: QuestSliderProps) 
       {/* Quest cards container */}
       <div className="overflow-hidden">
         <div 
-          className="flex transition-transform duration-300 ease-in-out gap-4"
+          className="flex transition-transform duration-300 ease-in-out"
           style={{ 
-            transform: `translateX(-${currentIndex * (100 / questsPerView)}%)`,
-            width: `${(quests.length / questsPerView) * 100}%`
+            transform: `translateX(-${currentIndex * 410}px)`, // 400px карточка + 10px отступ
+            gap: '10px'
           }}
         >
           {quests.map(quest => (
             <div 
               key={quest.id} 
               className="flex-none"
-              style={{ width: `${(100 / questsPerView) - 1.33}%` }}
             >
               <QuestCard
                 quest={quest}

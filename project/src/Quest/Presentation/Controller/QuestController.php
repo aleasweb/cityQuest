@@ -53,6 +53,17 @@ class QuestController extends AbstractController
 
         try {
             $result = $this->questListService->getQuests($filters, $sortField, $sortDirection, $limit, $offset);
+            
+            // Получаем маппинг городов и преобразуем названия
+            $cities = $this->getParameter('app.cities');
+            if (isset($result['data'])) {
+                foreach ($result['data'] as &$quest) {
+                    if (isset($quest['city']) && isset($cities[$quest['city']])) {
+                        $quest['city'] = $cities[$quest['city']];
+                    }
+                }
+            }
+            
             return $this->json($result);
         } catch (\Exception $e) {
             return $this->json(
@@ -90,6 +101,17 @@ class QuestController extends AbstractController
             $lng = (float) $longitude;
             
             $result = $this->questListService->getNearbyQuests($lat, $lng, $radius, $limit);
+            
+            // Получаем маппинг городов и преобразуем названия
+            $cities = $this->getParameter('app.cities');
+            if (isset($result['data'])) {
+                foreach ($result['data'] as &$quest) {
+                    if (isset($quest['city']) && isset($cities[$quest['city']])) {
+                        $quest['city'] = $cities[$quest['city']];
+                    }
+                }
+            }
+            
             return $this->json($result);
         } catch (\InvalidArgumentException $e) {
             return $this->json(
@@ -122,6 +144,13 @@ class QuestController extends AbstractController
 
         try {
             $quest = $this->questService->getQuestById($questId);
+            
+            // Преобразуем название города
+            $cities = $this->getParameter('app.cities');
+            if ($quest && isset($quest['city']) && isset($cities[$quest['city']])) {
+                $quest['city'] = $cities[$quest['city']];
+            }
+            
             return $this->json($quest);
         } catch (QuestNotFoundException $e) {
             return $this->json(

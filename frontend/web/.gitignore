@@ -3,3 +3,11 @@ node_modules/
 .wrangler/
 .dev.vars
 worker-configuration.d.ts
+
+# Production build
+dist/
+dist-ssr/
+*.local
+
+# Node
+node_modules/

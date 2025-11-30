@@ -1,0 +1,4 @@
+parameters:
+    app.cities:
+        moscow: 'Москва'
+        penza: 'Пенза'

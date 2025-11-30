@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Quest, QuestFilters } from '@/shared/types';
+import { api } from '@/shared/api';
+import type { Quest, QuestFilters, City } from '@/shared/types';
 
+/**
+ * Хук для получения списка квестов с фильтрами
+ */
 export function useQuests(filters: QuestFilters) {
   const [quests, setQuests] = useState<Quest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -10,33 +14,26 @@ export function useQuests(filters: QuestFilters) {
     const fetchQuests = async () => {
       try {
         setLoading(true);
-        const params = new URLSearchParams();
-        if (filters.city) params.append('city', filters.city);
-        if (filters.difficulty) params.append('difficulty', filters.difficulty);
-        if (filters.search) params.append('search', filters.search);
-        
-
-        const response = await fetch(`/api/quests?${params}`);
-        const result = await response.json();
-        
-        if (result.success) {
-          setQuests(result.data);
-        } else {
-          setError('Failed to load quests');
-        }
+        setError(null);
+        const data = await api.getQuests(filters);
+        setQuests(data);
       } catch (err) {
-        setError('Failed to load quests');
+        console.error('Failed to load quests:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load quests');
       } finally {
         setLoading(false);
       }
     };
 
     fetchQuests();
-  }, [filters.city, filters.difficulty, filters.search]);
+  }, [filters.city, filters.difficulty]);
 
   return { quests, loading, error };
 }
 
+/**
+ * Хук для получения одного квеста по ID
+ */
 export function useQuest(id: string) {
   const [quest, setQuest] = useState<Quest | null>(null);
   const [loading, setLoading] = useState(true);
@@ -46,16 +43,12 @@ export function useQuest(id: string) {
     const fetchQuest = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`/api/quests/${id}`);
-        const result = await response.json();
-        
-        if (result.success) {
-          setQuest(result.data);
-        } else {
-          setError('Quest not found');
-        }
+        setError(null);
+        const data = await api.getQuest(id);
+        setQuest(data);
       } catch (err) {
-        setError('Failed to load quest');
+        console.error('Failed to load quest:', err);
+        setError(err instanceof Error ? err.message : 'Quest not found');
       } finally {
         setLoading(false);
       }
@@ -67,21 +60,20 @@ export function useQuest(id: string) {
   return { quest, loading, error };
 }
 
+/**
+ * Хук для получения списка городов
+ */
 export function useCities() {
-  const [cities, setCities] = useState<string[]>([]);
+  const [cities, setCities] = useState<City[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchCities = async () => {
       try {
-        const response = await fetch('/api/cities');
-        const result = await response.json();
-        
-        if (result.success) {
-          setCities(result.data);
-        }
+        const data = await api.getCities();
+        setCities(data);
       } catch (err) {
-        console.error('Failed to load cities');
+        console.error('Failed to load cities:', err);
       } finally {
         setLoading(false);
       }
@@ -91,4 +83,27 @@ export function useCities() {
   }, []);
 
   return { cities, loading };
+}
+
+/**
+ * Хук для работы с лайками квестов
+ */
+export function useQuestLike(questId: string) {
+  const [isLiked, setIsLiked] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const toggleLike = async () => {
+    try {
+      setIsLoading(true);
+      const result = await api.toggleLike(questId);
+      setIsLiked(result.liked);
+    } catch (err) {
+      console.error('Failed to toggle like:', err);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return { isLiked, isLoading, toggleLike };
 }
