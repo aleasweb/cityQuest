@@ -5,6 +5,7 @@
 -- не забудьте обновить этот файл соответствующим образом!
 -- Этот скрипт используется для инициализации чистой БД в Docker.
 
+-- Таблица пользователей
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY,
     email VARCHAR(255) NOT NULL UNIQUE,
@@ -14,47 +15,95 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+COMMENT ON COLUMN users.id IS '(DC2Type:uuid)';
+COMMENT ON COLUMN users.created_at IS '(DC2Type:datetime_immutable)';
+
 CREATE UNIQUE INDEX IF NOT EXISTS users_email_unique ON users (email);
 CREATE UNIQUE INDEX IF NOT EXISTS users_username_unique ON users (username);
 
+-- Таблица квестов
 CREATE TABLE IF NOT EXISTS quests (
-    id SERIAL PRIMARY KEY,
-    title TEXT NOT NULL,
+    id UUID PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
     description TEXT,
-    city TEXT,
-    difficulty TEXT,
-    duration_minutes INTEGER,
-    distance_km REAL,
-    image_url TEXT,
-    author TEXT,
-    likes_count INTEGER DEFAULT 0,
-    is_popular BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    city VARCHAR(100),
+    difficulty VARCHAR(50),
+    duration_minutes INT,
+    distance_km DOUBLE PRECISION,
+    image_url VARCHAR(500),
+    author VARCHAR(255),
+    likes_count INT DEFAULT 0 NOT NULL,
+    is_popular BOOLEAN DEFAULT FALSE NOT NULL,
+    latitude DOUBLE PRECISION,
+    longitude DOUBLE PRECISION,
+    created_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL,
+    updated_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL
 );
 
-INSERT INTO quests (title, description, city, difficulty, duration_minutes, distance_km, image_url, author, likes_count, is_popular) VALUES
-('Исторический центр Москвы', 'Пройдите по следам великих событий российской истории через Красную площадь, Кремль и близлежащие улицы.', 'Москва', 'средние', 120, 3.5, 'https://images.unsplash.com/photo-1520637836862-4d197d17c63a?w=800', 'Анна Петрова', 247, TRUE),
-('Тайны Питерских дворов', 'Откройте секреты парадных и дворов Санкт-Петербурга, где история оживает в каждом уголке.', 'Санкт-Петербург', 'сложные', 180, 4.2, 'https://images.unsplash.com/photo-1583048800985-d8e8b8b1f66d?w=800', 'Михаил Сидоров', 189, TRUE),
-('Прогулка по Арбату', 'Легкий квест по самой известной пешеходной улице Москвы с множеством интересных фактов.', 'Москва', 'легкие', 60, 1.5, 'https://images.unsplash.com/photo-1520348264293-bb93b6b2572a?w=800', 'Елена Козлова', 156, FALSE),
-('Казанский кремль', 'Изучите архитектуру и историю Казанского кремля, объекта всемирного наследия ЮНЕСКО.', 'Казань', 'средние', 90, 2.1, 'https://images.unsplash.com/photo-1546196104-d7deb2beeff7?w=800', 'Рустам Галиев', 98, FALSE),
-('Ночной Екатеринбург', 'Вечерний квест по центру Екатеринбурга с посещением основных достопримечательностей.', 'Екатеринбург', 'легкие', 75, 2.8, 'https://images.unsplash.com/photo-1496436818536-e239445d3327?w=800', 'Дмитрий Волков', 67, FALSE),
-('Золотое кольцо мини', 'Компактный квест по достопримечательностям в стиле Золотого кольца России.', 'Владимир', 'сложные', 240, 8.5, 'https://images.unsplash.com/photo-1511593358241-7eea1f3c84e5?w=800', 'Ольга Смирнова', 203, TRUE),
-('Тайны Кремля', 'Откройте секреты главной крепости России. Путешествие по историческим залам и башням.', 'Москва', 'средние', 180, 2.5, 'https://images.unsplash.com/photo-1513326738677-b964603b136d?w=800', 'Историк Петров', 245, TRUE),
-('Невский проспект: от дворца до дворца', 'Прогулка по главной улице Петербурга с посещением знаковых мест и дворцов.', 'Санкт-Петербург', 'легкие', 120, 3.2, 'https://images.unsplash.com/photo-1520637836862-4d197d17c35a?w=800', 'Гид Анна', 189, TRUE),
-('Золотое кольцо в миниатюре', 'Знакомство с архитектурой древних русских городов прямо в центре столицы.', 'Москва', 'сложные', 240, 4.1, 'https://images.unsplash.com/photo-1547036967-23d11aacaee0?w=800', 'Краевед Иванов', 156, TRUE),
-('Тайны Петроградской стороны', 'Откройте для себя скрытые уголки и исторические загадки одного из самых атмосферных районов Санкт-Петербурга', 'Санкт-Петербург', 'средние', 90, 3.2, 'https://images.unsplash.com/photo-1571676165379-b64d66fd7ca1?w=800&h=600&fit=crop', 'Екатерина Волкова', 87, true),
-('Московское метро: подземные дворцы', 'Путешествие по самым красивым станциям московского метрополитена с изучением их архитектурных особенностей', 'Москва', 'легкие', 120, 5.1, 'https://images.unsplash.com/photo-1517154421773-0529f29ea451?w=800&h=600&fit=crop', 'Дмитрий Соколов', 156, true),
-('Казанский кремль и татарская слобода', 'Погружение в многовековую историю Казани через посещение древних памятников и национальных кварталов', 'Казань', 'сложные', 180, 4.8, 'https://images.unsplash.com/photo-1513977055326-8ae4e6aeb58d?w=800&h=600&fit=crop', 'Айгуль Хасанова', 92, true);
+COMMENT ON COLUMN quests.id IS '(DC2Type:uuid)';
+COMMENT ON COLUMN quests.created_at IS '(DC2Type:datetime_immutable)';
+COMMENT ON COLUMN quests.updated_at IS '(DC2Type:datetime_immutable)';
 
-CREATE TABLE user_quest_progress (
-    id SERIAL PRIMARY KEY,
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    quest_id INTEGER NOT NULL REFERENCES quests(id) ON DELETE CASCADE,
-    is_completed BOOLEAN DEFAULT FALSE,
-    is_liked BOOLEAN DEFAULT FALSE,
-    completed_at TIMESTAMP,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(user_id, quest_id)
+-- Индексы для оптимизации поиска
+CREATE INDEX IF NOT EXISTS quests_city_idx ON quests (city);
+CREATE INDEX IF NOT EXISTS quests_difficulty_idx ON quests (difficulty);
+CREATE INDEX IF NOT EXISTS quests_is_popular_idx ON quests (is_popular);
+CREATE INDEX IF NOT EXISTS quests_created_at_idx ON quests (created_at);
+CREATE INDEX IF NOT EXISTS quests_geolocation_idx ON quests (latitude, longitude);
+
+-- Таблица прогресса пользователей по квестам
+CREATE TABLE IF NOT EXISTS user_quest_progress (
+    id UUID PRIMARY KEY,
+    user_id UUID NOT NULL,
+    quest_id UUID NOT NULL,
+    status VARCHAR(20) DEFAULT 'active' NOT NULL,
+    is_liked BOOLEAN DEFAULT FALSE NOT NULL,
+    completed_at TIMESTAMP(0) WITHOUT TIME ZONE,
+    created_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL,
+    updated_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL,
+    CONSTRAINT fk_user_quest_progress_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_user_quest_progress_quest FOREIGN KEY (quest_id) REFERENCES quests(id) ON DELETE CASCADE,
+    CONSTRAINT unique_user_quest UNIQUE (user_id, quest_id),
+    CONSTRAINT check_status CHECK (status IN ('active', 'paused', 'completed'))
 );
+
+COMMENT ON COLUMN user_quest_progress.id IS '(DC2Type:uuid)';
+COMMENT ON COLUMN user_quest_progress.user_id IS '(DC2Type:uuid)';
+COMMENT ON COLUMN user_quest_progress.quest_id IS '(DC2Type:uuid)';
+COMMENT ON COLUMN user_quest_progress.completed_at IS '(DC2Type:datetime_immutable)';
+COMMENT ON COLUMN user_quest_progress.created_at IS '(DC2Type:datetime_immutable)';
+COMMENT ON COLUMN user_quest_progress.updated_at IS '(DC2Type:datetime_immutable)';
+
+-- Индексы для user_quest_progress
+CREATE INDEX IF NOT EXISTS idx_user_status ON user_quest_progress(user_id, status);
+CREATE INDEX IF NOT EXISTS idx_quest ON user_quest_progress(quest_id);
+CREATE INDEX IF NOT EXISTS idx_user_liked ON user_quest_progress(user_id, is_liked);
+
+
+INSERT INTO quests (
+    id, title, description, city, difficulty, duration_minutes, distance_km, image_url,
+    author, likes_count, is_popular, latitude, longitude, created_at, updated_at
+) VALUES
+      ('b4362704-891a-4e7f-850d-6be733124628', 'Вдоль по улице (часть 1)',
+       'Ваша задача по фотографиям понять на какой улице находятся данные объекты. А затем найти сами объекты в любом порядке.\nВажно! Все объекты находятся на одной улице',
+       'Penza', 'medium', 60, 4.0, '/s3/q1.png', 'aleas', 2, TRUE, 53.20166, 45.00564, '2025-11-30 12:36:59', '2025-11-30 12:36:59'),
+
+      ('bbeee4d6-d112-46d8-983c-9b2dae6f24dc', 'Вдоль по улице (часть 2)',
+       'Ваша задача по фотографиям понять на какой улице находятся данные объекты. А затем найти сами объекты в любом порядке.\nВажно! Все объекты находятся на одной улице',
+       'Penza', 'medium', 50, 4.0, '/s3/q2.png', 'aleas', 0, TRUE, 53.20266, 45.00614, '2025-11-30 12:36:59', '2025-11-30 12:36:59'),
+
+      ('2e90c723-8613-4121-8098-b52ba8fd5b8e', 'Пензенские силуэты',
+       'Ваша задача по силуэту объекта с изображения понять, что это за объект в городе и найти его',
+       'Penza', 'easy', 80, 5.0, '/s3/q3.png', 'aleas', 4, TRUE, 53.20366, 45.00664, '2025-11-30 12:36:59', '2025-11-30 12:36:59'),
+
+      ('349ab46f-acab-4500-b421-97e83955bfbf', 'Внимание к деталям',
+       'Ваша задача по фото детали объекта понять частью какого реального объекта она является и найти сам объект',
+       'Penza', 'difficult', 100, 4.0, '/s3/q4.jpeg', 'aleas', 5, FALSE, 53.20466, 45.00764, '2025-11-30 12:36:59', '2025-11-30 12:36:59'),
+
+      ('1889ea69-d48e-4ef0-9da8-f9028517a2e1', 'Старая Пенза',
+       'Ваша задача по архивному фото понять что это за объект и найти место его расположения',
+       'Penza', 'medium', 60, NULL, '/s3/q5.png', 'aleas', 3, TRUE, 53.20316, 45.00664, '2025-11-30 12:36:59', '2025-11-30 12:36:59'),
+
+      ('3db76d13-a3f8-4719-8534-0e03132b72f4', 'Московский кремль',
+       'Ваша задача по фото найти объекты на территории московского кремля',
+       'Moscow', 'easy', 30, 2.0, '/s3/q6.webp', 'aleas', 5, FALSE, 55.752121, 37.617664, '2025-11-30 12:36:59', '2025-11-30 12:36:59');
