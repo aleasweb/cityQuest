@@ -51,12 +51,19 @@ trait DatabaseTestTrait
     }
 
     /**
-     * Очищает основные таблицы проекта перед тестом.
-     * Рекомендуется вызывать в setUp() методе.
+     * Инициализирует БД для теста: получает EntityManager и очищает таблицы.
+     * Должен вызываться ПОСЛЕ createClient() в тесте.
+     * 
+     * @param KernelBrowser $client Клиент для получения EntityManager из его контейнера
+     * @param array $tables Массив таблиц для очистки
      */
-    protected function cleanupDatabase(): void
+    protected function setUpDatabase(KernelBrowser $client, array $tables = ['quests', 'users', 'user_quest_progress']): void
     {
-        $this->clearTables(['quests', 'users', 'user_quest_progress']);
+        $this->entityManager = $client->getContainer()
+            ->get('doctrine')
+            ->getManager();
+        
+        $this->clearTables($tables);
     }
 
     /**
@@ -82,4 +89,3 @@ trait DatabaseTestTrait
         }
     }
 }
-

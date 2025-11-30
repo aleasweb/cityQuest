@@ -13,25 +13,30 @@ class QuestControllerTest extends WebTestCase
 {
     use DatabaseTestTrait;
 
-    protected function setUp(): void
-    {
-        parent::setUp();
-        // Очищаем таблицы перед каждым тестом
-        $this->cleanupDatabase();
-    }
-
     protected function tearDown(): void
     {
         parent::tearDown();
         $this->closeEntityManager();
     }
 
-    public function testGetQuestReturnsQuestData(): void
+    /**
+     * Создает клиент и инициализирует БД для теста.
+     * 
+     * @param array $tables Массив таблиц для очистки
+     */
+    private function createClientWithDatabase(array $tables = ['quests', 'users', 'user_quest_progress'])
     {
         $client = static::createClient();
+        $this->setUpDatabase($client, $tables);
+        return $client;
+    }
+
+    public function testGetQuestReturnsQuestData(): void
+    {
+        $client = $this->createClientWithDatabase();
         
         // Создаем тестовый квест
-        $quest = TestObjectFactory::createQuestWithDefaults($this->getEntityManager(), 'Integration Test Quest');
+        $quest = TestObjectFactory::createQuestWithDefaults($this->getEntityManager($client), 'Integration Test Quest');
         
         $client->request('GET', '/api/quests/' . (string) $quest->getId());
         
@@ -57,7 +62,7 @@ class QuestControllerTest extends WebTestCase
 
     public function testGetQuestReturnsNotFoundForNonExistentQuest(): void
     {
-        $client = static::createClient();
+        $client = $this->createClientWithDatabase();
         
         $nonExistentId = Uuid::v4();
         $client->request('GET', '/api/quests/' . (string) $nonExistentId);
@@ -72,7 +77,7 @@ class QuestControllerTest extends WebTestCase
 
     public function testGetQuestReturnsBadRequestForInvalidUuid(): void
     {
-        $client = static::createClient();
+        $client = $this->createClientWithDatabase();
         
         $client->request('GET', '/api/quests/invalid-uuid-format');
         
@@ -85,10 +90,10 @@ class QuestControllerTest extends WebTestCase
 
     public function testGetQuestDoesNotRequireAuthentication(): void
     {
-        $client = static::createClient();
+        $client = $this->createClientWithDatabase();
         
         // Создаем тестовый квест
-        $quest = TestObjectFactory::createQuest($this->getEntityManager(), 'Public Access Test Quest');
+        $quest = TestObjectFactory::createQuest($this->getEntityManager($client), 'Public Access Test Quest');
         
         // Запрос без JWT токена
         $client->request('GET', '/api/quests/' . (string) $quest->getId());
@@ -102,11 +107,11 @@ class QuestControllerTest extends WebTestCase
 
     public function testGetQuestsReturnsListOfQuests(): void
     {
-        $client = static::createClient();
+        $client = $this->createClientWithDatabase();
         
         // Создаем несколько тестовых квестов
-        $quest1 = TestObjectFactory::createQuest($this->getEntityManager(), 'Quest List Test 1');
-        $quest2 = TestObjectFactory::createQuest($this->getEntityManager(), 'Quest List Test 2');
+        $quest1 = TestObjectFactory::createQuest($this->getEntityManager($client), 'Quest List Test 1');
+        $quest2 = TestObjectFactory::createQuest($this->getEntityManager($client), 'Quest List Test 2');
         
         $client->request('GET', '/api/quests');
         
@@ -126,9 +131,9 @@ class QuestControllerTest extends WebTestCase
 
     public function testGetQuestsWithCityFilter(): void
     {
-        $client = static::createClient();
+        $client = $this->createClientWithDatabase();
         
-        $quest = TestObjectFactory::createQuest($this->getEntityManager(), 'Moscow Quest');
+        $quest = TestObjectFactory::createQuest($this->getEntityManager($client), 'Moscow Quest');
         
         $client->request('GET', '/api/quests?city=Moscow');
         
@@ -145,11 +150,11 @@ class QuestControllerTest extends WebTestCase
 
     public function testGetQuestsWithPagination(): void
     {
-        $client = static::createClient();
+        $client = $this->createClientWithDatabase();
         
         // Create multiple quests
         for ($i = 1; $i <= 3; $i++) {
-            TestObjectFactory::createQuest($this->getEntityManager(), "Pagination Test Quest $i");
+            TestObjectFactory::createQuest($this->getEntityManager($client), "Pagination Test Quest $i");
         }
         
         $client->request('GET', '/api/quests?limit=2&offset=0');
@@ -165,7 +170,7 @@ class QuestControllerTest extends WebTestCase
 
     public function testGetNearbyQuestsRequiresLatLng(): void
     {
-        $client = static::createClient();
+        $client = $this->createClientWithDatabase();
         
         $client->request('GET', '/api/quests/nearby');
         
@@ -178,17 +183,17 @@ class QuestControllerTest extends WebTestCase
 
     public function testGetNearbyQuestsReturnsQuests(): void
     {
-        $client = static::createClient();
+        $client = $this->createClientWithDatabase();
         
         // Create quest with coordinates (Moscow center)
         $quest1 = TestObjectFactory::createQuest(
-            entityManager: $this->getEntityManager(),
+            entityManager: $this->getEntityManager($client),
             title: 'Moscow Nearby Quest',
             latitude: 55.7558,
             longitude: 37.6173
         );
         $quest2 = TestObjectFactory::createQuest(
-            entityManager: $this->getEntityManager(),
+            entityManager: $this->getEntityManager($client),
             title: 'London Quest',
             latitude: 51.5002,
             longitude: 0.0000
