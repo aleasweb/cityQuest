@@ -23,7 +23,7 @@ class AuthController extends AbstractController
     ) {
     }
 
-    #[Route('/register', name: 'register', methods: ['POST'])]
+    #[Route('/register', name: 'register', methods: ['POST', 'OPTIONS'])]
     public function register(Request $request): JsonResponse
     {
         try {

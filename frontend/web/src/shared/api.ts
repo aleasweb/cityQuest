@@ -1,3 +1,4 @@
+import { jwtDecode } from 'jwt-decode';
 import type { Quest, QuestFilters, UserProgress, RegisterData, LoginData, AuthResponse, User, City } from './types';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
@@ -225,15 +226,14 @@ export const api = {
     localStorage.setItem('jwt_token', response.token);
     
     // Декодируем JWT для получения данных пользователя
-    // В production используйте библиотеку jwt-decode
-    const payload = JSON.parse(atob(response.token.split('.')[1]));
+    const payload = jwtDecode<{ sub?: string; user_id?: string; email?: string; username?: string }>(response.token);
     
     return {
       token: response.token,
       user: {
-        id: payload.sub || payload.user_id,
-        email: payload.email || payload.username,
-        username: payload.username || payload.email,
+        id: payload.sub || payload.user_id || '',
+        email: payload.email || payload.username || '',
+        username: payload.username || payload.email || '',
         createdAt: new Date().toISOString(),
       },
     };
@@ -263,7 +263,13 @@ export const api = {
     
     try {
       // Декодируем JWT
-      const payload = JSON.parse(atob(token.split('.')[1]));
+      const payload = jwtDecode<{ 
+        sub?: string; 
+        user_id?: string; 
+        email?: string; 
+        username?: string; 
+        exp?: number 
+      }>(token);
       
       // Проверяем срок действия
       if (payload.exp && payload.exp * 1000 < Date.now()) {
@@ -272,9 +278,9 @@ export const api = {
       }
       
       return {
-        id: payload.sub || payload.user_id,
-        email: payload.email || payload.username,
-        username: payload.username || payload.email,
+        id: payload.sub || payload.user_id || '',
+        email: payload.email || payload.username || '',
+        username: payload.username || payload.email || '',
         createdAt: new Date().toISOString(),
       };
     } catch (error) {

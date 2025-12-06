@@ -48,7 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await api.register(data);
       // После регистрации автоматически логинимся
-      await login({ email: data.email, password: data.password });
+      await login({ username: data.username, password: data.password });
     } catch (error) {
       console.error('Registration failed:', error);
       throw error;

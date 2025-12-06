@@ -1,14 +1,16 @@
+import { useState } from 'react';
 import { Compass, User, LogIn } from 'lucide-react';
 import { useAuth } from '@/react-app/contexts/AuthContext';
 import { useNavigate } from 'react-router';
+import AuthModal from './AuthModal';
 
 export default function Header() {
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   const handleLogin = () => {
-    // TODO: Открыть модальное окно входа или перейти на страницу логина
-    alert('Функция входа будет реализована позже');
+    setIsAuthModalOpen(true);
   };
 
   return (
@@ -58,6 +60,12 @@ export default function Header() {
           </div>
         </div>
       </div>
+
+      {/* Auth Modal */}
+      <AuthModal 
+        isOpen={isAuthModalOpen} 
+        onClose={() => setIsAuthModalOpen(false)} 
+      />
     </header>
   );
 }
