@@ -8,23 +8,32 @@ interface QuestCardProps {
 
 export default function QuestCard({ quest, onClick }: QuestCardProps) {
   const difficultyColors = {
-    'легкие': 'bg-green-500',
-    'средние': 'bg-yellow-500',
-    'сложные': 'bg-red-500'
+    'easy': 'bg-green-500',
+    'medium': 'bg-yellow-500', 
+    'hard': 'bg-red-500'
   };
 
   return (
     <div 
       onClick={onClick}
-      className="relative bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden group border-2 border-transparent hover:border-orange-500/50"
+      className="w-[400px] flex-shrink-0 relative bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden group border-2 border-transparent hover:border-orange-500/50"
       style={{ aspectRatio: '5/3' }}
     >
       <div className="relative h-full">
+        {quest.imageUrl ? (
         <img 
-          src={quest.image_url || 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800'} 
+            src={quest.imageUrl} 
           alt={quest.title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
         />
+        ) : (
+          <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+            <div className="text-gray-400 text-center">
+              <div className="text-2xl mb-2">🖼️</div>
+              <div className="text-sm">Нет изображения</div>
+            </div>
+          </div>
+        )}
         
         {/* Gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
@@ -52,13 +61,13 @@ export default function QuestCard({ quest, onClick }: QuestCardProps) {
               <div className="flex items-center space-x-3 flex-shrink-0">
                 <div className="flex items-center text-orange-400">
                   <Heart className="w-4 h-4 mr-1" />
-                  <span className="font-medium">{quest.likes_count}</span>
+                  <span className="font-medium">{quest.likesCount}</span>
                 </div>
                 
-                {quest.duration_minutes && (
+                {quest.durationMinutes && (
                   <div className="flex items-center text-orange-300">
                     <Clock className="w-4 h-4 mr-1" />
-                    <span className="font-medium">{quest.duration_minutes}</span>
+                    <span className="font-medium">{quest.durationMinutes}</span>
                   </div>
                 )}
               </div>

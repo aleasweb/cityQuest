@@ -1,18 +1,38 @@
 import path from "path";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import { cloudflare } from "@cloudflare/vite-plugin";
-import { mochaPlugins } from "@getmocha/vite-plugins";
 
 export default defineConfig({
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  plugins: [...mochaPlugins(process.env as any), react(), cloudflare()],
+  plugins: [react()],
+  
+  // Build настройки
+  build: {
+    outDir: 'dist',
+    emptyOutDir: true,
+    chunkSizeWarningLimit: 5000,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router'],
+        }
+      }
+    }
+  },
+  
+  // Dev server настройки
   server: {
     allowedHosts: true,
+    port: 5173,
+    // Proxy для dev режима (опционально)
+    proxy: {
+      '/api': {
+        target: 'http://cityquest.test',
+        changeOrigin: true,
+        secure: false,
+      }
+    }
   },
-  build: {
-    chunkSizeWarningLimit: 5000,
-  },
+  
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

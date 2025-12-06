@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router';
 import { Loader2, TrendingUp, Sparkles } from 'lucide-react';
 import { QuestFilters } from '@/shared/types';
 import { useQuests } from '@/react-app/hooks/useQuests';
-import QuestCard from '@/react-app/components/QuestCard';
 import QuestSlider from '@/react-app/components/QuestSlider';
 import Filters from '@/react-app/components/Filters';
 import Header from '@/react-app/components/Header';
@@ -32,8 +31,8 @@ export default function Home() {
     );
   }
 
-  const popularQuests = quests.filter(quest => quest.is_popular);
-  const newQuests = quests.filter(quest => !quest.is_popular);
+  const popularQuests = quests.filter(quest => quest.isPopular);
+  const newQuests = quests.filter(quest => !quest.isPopular);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">

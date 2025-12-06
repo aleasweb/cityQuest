@@ -56,9 +56,15 @@ export default function QuestDetail() {
   }
 
   const difficultyColors = {
-    'легкие': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-    'средние': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-    'сложные': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+    'easy': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+    'medium': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+    'hard': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+  };
+
+  const difficultyLabels = {
+    'easy': 'Легкие',
+    'medium': 'Средние',
+    'hard': 'Сложные'
   };
 
   return (
@@ -77,8 +83,10 @@ export default function QuestDetail() {
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
           {/* Hero Image */}
           <div className="relative h-96">
+            {quest.imageUrl ? (
+              <>
             <img
-              src={quest.image_url || 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=1200'}
+                  src={quest.imageUrl}
               alt={quest.title}
               className="w-full h-full object-cover"
             />
@@ -90,6 +98,22 @@ export default function QuestDetail() {
                 {quest.city}
               </div>
             </div>
+              </>
+            ) : (
+              <div className="w-full h-full bg-gray-200 flex flex-col items-center justify-center">
+                <div className="text-gray-400 text-center mb-6">
+                  <div className="text-6xl mb-4">🖼️</div>
+                  <div className="text-lg">Нет изображения</div>
+                </div>
+                <div className="bg-white/90 backdrop-blur-sm p-6 rounded-lg shadow-lg">
+                  <h1 className="text-3xl font-bold text-gray-900 mb-2">{quest.title}</h1>
+                  <div className="flex items-center text-gray-600">
+                    <MapPin className="w-5 h-5 mr-2" />
+                    {quest.city}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="p-8">
@@ -102,7 +126,7 @@ export default function QuestDetail() {
                 >
                   <Heart className={`w-6 h-6 mr-2 ${liked ? 'fill-current' : ''}`} />
                   <span className="font-semibold text-lg">
-                    {quest.likes_count + (liked ? 1 : 0)}
+                    {quest.likesCount + (liked ? 1 : 0)}
                   </span>
                 </button>
               </div>
@@ -111,20 +135,20 @@ export default function QuestDetail() {
                 difficultyColors[quest.difficulty as keyof typeof difficultyColors] || 
                 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
               }`}>
-                {quest.difficulty}
+                {difficultyLabels[quest.difficulty as keyof typeof difficultyLabels] || quest.difficulty}
               </span>
 
-              {quest.duration_minutes && (
+              {quest.durationMinutes && (
                 <div className="flex items-center text-gray-600 dark:text-gray-400">
                   <Clock className="w-5 h-5 mr-2" />
-                  <span>{quest.duration_minutes} минут</span>
+                  <span>{quest.durationMinutes} минут</span>
                 </div>
               )}
 
-              {quest.distance_km && (
+              {quest.distanceKm && (
                 <div className="flex items-center text-gray-600 dark:text-gray-400">
                   <Route className="w-5 h-5 mr-2" />
-                  <span>{quest.distance_km} км</span>
+                  <span>{quest.distanceKm} км</span>
                 </div>
               )}
 

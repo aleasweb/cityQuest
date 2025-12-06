@@ -26,6 +26,7 @@ services:
       context: ./docker/nginx
     volumes:
       - ./project:/app
+      - ./frontend/web/dist:/app/frontend/dist:ro
     environment:
       VIRTUAL_HOST: ${NGINX_VIRTUAL_HOST}
     depends_on:

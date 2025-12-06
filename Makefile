@@ -78,3 +78,21 @@ cs-fix: ## Fix as much coding standards problems
 
 composer-validate: ## Validate your composer.json file
 	${PHP_CONT} composer validate
+
+##—————————————————————————————— Frontend
+frontend-install: ## Install frontend dependencies
+	cd frontend/web && npm install
+
+frontend-build: ## Build frontend for production
+	cd frontend/web && npm run build
+	@echo "✅ Frontend built to frontend/web/dist"
+
+frontend-dev: ## Run frontend dev server
+	cd frontend/web && npm run dev
+
+frontend-clean: ## Clean frontend build
+	rm -rf frontend/web/dist
+	rm -rf frontend/web/node_modules
+
+deploy: frontend-build restart ## Build frontend and restart containers
+	@echo "✅ Deployed!"
