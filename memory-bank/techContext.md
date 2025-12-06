@@ -110,8 +110,8 @@ Dev:
 ## 🌐 API Endpoints
 
 ### Аутентификация
-- `POST /api/auth/register` - Регистрация
-- `POST /api/auth/login` - Вход
+- `POST /api/auth/register` - Регистрация (email, username, password)
+- `POST /api/auth/login` - Вход (username, password) → JWT token
 - `POST /api/auth/logout` - Выход
 
 ### Квесты (публичные)
@@ -130,8 +130,8 @@ Dev:
 ## 🔐 Безопасность
 
 ### Аутентификация
-- JWT токены для API
-- Session-based для web
+- JWT токены для API (username-based login)
+- Авторизация через пару username + password
 - Bcrypt для хеширования паролей
 
 ### CORS

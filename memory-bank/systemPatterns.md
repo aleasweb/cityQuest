@@ -217,6 +217,11 @@ public function getUserIdentifier(): string
 4. JWT token generated with username claim
 5. Token returned to client: `{"token": "eyJ..."}`
 
+**Frontend Implementation:**
+- Login form accepts `username` (NOT email) + `password`
+- After registration, auto-login uses `username` field
+- JWT token stored in localStorage as `jwt_token`
+
 ---
 
 ## 🏗️ Domain-Driven Design (DDD) Structure
