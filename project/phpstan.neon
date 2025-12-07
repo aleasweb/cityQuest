@@ -3,3 +3,6 @@ parameters:
     paths:
         - src
         - tests
+    excludePaths:
+        # Исключаем unit тесты из анализа, т.к. PHPStan не понимает PHPUnit моки без расширения
+        - tests/*/Application/Service/*Test.php

@@ -7,6 +7,7 @@ namespace App\UserProgress\Application\Service;
 use App\Quest\Domain\Exception\QuestNotFoundException;
 use App\Quest\Domain\Repository\QuestRepositoryInterface;
 use App\UserProgress\Domain\Entity\UserQuestProgress;
+use App\UserProgress\Domain\Exception\QuestNotStartedException;
 use App\UserProgress\Domain\Repository\UserQuestProgressRepositoryInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Uid\Uuid;
@@ -27,6 +28,7 @@ class QuestLikeService
      * Toggle like for a quest
      * 
      * @throws QuestNotFoundException If quest doesn't exist
+     * @throws QuestNotStartedException If quest hasn't been started
      * @return array{liked: bool, likesCount: int} Current like status and total likes count
      */
     public function toggleLike(Uuid $userId, Uuid $questId): array
@@ -37,34 +39,26 @@ class QuestLikeService
             throw QuestNotFoundException::withId($questId);
         }
 
+        // Check if quest has been started
+        $progress = $this->progressRepository->findByUserIdAndQuestId($userId, $questId);
+        if ($progress === null) {
+            throw QuestNotStartedException::forQuest($questId);
+        }
+
         // Use transaction to ensure consistency
         $this->entityManager->beginTransaction();
         
         try {
-            // Find or create progress
-            $progress = $this->progressRepository->findByUserIdAndQuestId($userId, $questId);
+            // Toggle existing like
+            $wasLiked = $progress->isLiked();
+            $liked = $progress->toggleLike();
+            $this->progressRepository->save($progress);
             
-            if ($progress === null) {
-                // Create new progress record with like
-                $progress = new UserQuestProgress($userId, $questId);
-                $progress->like();
-                $this->progressRepository->save($progress);
-                
-                // Increment likes count
+            // Update likes count
+            if ($liked && !$wasLiked) {
                 $this->questRepository->incrementLikesCount($questId);
-                $liked = true;
-            } else {
-                // Toggle existing like
-                $wasLiked = $progress->isLiked();
-                $liked = $progress->toggleLike();
-                $this->progressRepository->save($progress);
-                
-                // Update likes count
-                if ($liked && !$wasLiked) {
-                    $this->questRepository->incrementLikesCount($questId);
-                } elseif (!$liked && $wasLiked) {
-                    $this->questRepository->decrementLikesCount($questId);
-                }
+            } elseif (!$liked && $wasLiked) {
+                $this->questRepository->decrementLikesCount($questId);
             }
             
             $this->entityManager->commit();
@@ -81,6 +75,17 @@ class QuestLikeService
             $this->entityManager->rollback();
             throw $e;
         }
+    }
+
+    /**
+     * Check if user can like a quest
+     * User can like a quest only if it has been started (exists in user_quest_progress)
+     */
+    public function canLike(Uuid $userId, Uuid $questId): bool
+    {
+        $progress = $this->progressRepository->findByUserIdAndQuestId($userId, $questId);
+        
+        return $progress !== null;
     }
 
     /**

@@ -110,6 +110,65 @@ headers: {
 }
 ```
 
+## 🔓 Опциональная авторизация
+
+**Некоторые endpoints поддерживают опциональную JWT авторизацию** - они доступны как для авторизованных, так и для неавторизованных пользователей, но возвращают разные данные в зависимости от наличия токена.
+
+### Пример: GET /api/quests/{id}
+
+**Без токена:**
+```json
+{
+  "data": {
+    "id": "...",
+    "title": "Квест",
+    "likesCount": 5,
+    "isLikedByCurrentUser": false  // всегда false
+  }
+}
+```
+
+**С токеном:**
+```json
+{
+  "data": {
+    "id": "...",
+    "title": "Квест",
+    "likesCount": 5,
+    "isLikedByCurrentUser": true  // реальный статус для пользователя
+  }
+}
+```
+
+**Реализация (Backend):**
+```yaml
+# security.yaml
+api_quests_public:
+    pattern: ^/api/quests
+    methods: [GET]
+    stateless: true
+    provider: app_user_provider
+    jwt: ~  # JWT проверяется, если присутствует
+
+access_control:
+    - { path: ^/api/quests, methods: [GET], roles: PUBLIC_ACCESS }
+```
+
+**Реализация (Controller):**
+```php
+$securityUser = $this->getUser();  // может быть null
+if ($securityUser) {
+    $user = $this->userRepository->findByUsername($securityUser->getUserIdentifier());
+    if ($user) {
+        $quest['isLikedByCurrentUser'] = $this->questLikeService->isLiked($user->getId(), $questId);
+    }
+} else {
+    $quest['isLikedByCurrentUser'] = false;
+}
+```
+
+**Важно:** `$this->getUser()` возвращает `UserInterface|null`, а не полный User entity. Для получения полного entity используйте `UserRepository::findByUsername()`.
+
 ## ⚠️ Типичные ошибки
 
 ### "The string did not match the expected pattern"
@@ -132,5 +191,5 @@ headers: {
 
 ---
 
-**Обновлено:** 2025-12-06
+**Обновлено:** 2025-12-07
 

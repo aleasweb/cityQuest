@@ -1,28 +1,178 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { ArrowLeft, Heart, Clock, MapPin, User, Route } from 'lucide-react';
+import { ArrowLeft, Heart, Clock, MapPin, User, Route, Loader2, Pause, XCircle } from 'lucide-react';
 import { useQuest } from '@/react-app/hooks/useQuests';
+import { useAuth } from '@/react-app/contexts/AuthContext';
+import { api } from '@/shared/api';
 import Header from '@/react-app/components/Header';
+import Toast from '@/react-app/components/Toast';
+import ActiveQuestModal from '@/react-app/components/ActiveQuestModal';
 
 export default function QuestDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { quest, loading, error } = useQuest(id!);
+  const { isAuthenticated } = useAuth();
+  
+  // Like state
   const [liked, setLiked] = useState(false);
+  const [likesCount, setLikesCount] = useState(0);
+  const [isLiking, setIsLiking] = useState(false);
+  
+  // Start quest state
+  const [isStarting, setIsStarting] = useState(false);
+  const [showActiveQuestModal, setShowActiveQuestModal] = useState(false);
+  
+  // Pause/Abandon quest state
+  const [isPausing, setIsPausing] = useState(false);
+  const [isAbandoning, setIsAbandoning] = useState(false);
+  const [showAbandonConfirm, setShowAbandonConfirm] = useState(false);
+  
+  // Toast state
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  // Sync likesCount and liked state with quest data
+  useEffect(() => {
+    if (quest) {
+      setLikesCount(quest.likesCount);
+      setLiked(quest.isLikedByCurrentUser ?? false);
+    }
+  }, [quest]);
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ message, type });
+  };
 
   const handleLike = async () => {
-    if (!liked && quest) {
-      try {
-        await fetch(`/api/quests/${quest.id}/like`, { method: 'POST' });
-        setLiked(true);
-      } catch (err) {
-        console.error('Failed to like quest');
+    if (!quest) return;
+    
+    if (!isAuthenticated) {
+      showToast('Войдите, чтобы отметить квест', 'error');
+      return;
+    }
+
+    // Проверяем, начат ли квест
+    if (!quest.isStartedByCurrentUser) {
+      showToast('Начните квест, чтобы поставить лайк', 'error');
+      return;
+    }
+
+    // Optimistic update
+    const wasLiked = liked;
+    const previousCount = likesCount;
+    setLiked(!liked);
+    setLikesCount(liked ? likesCount - 1 : likesCount + 1);
+    setIsLiking(true);
+
+    try {
+      const result = await api.toggleLike(quest.id);
+      setLiked(result.liked);
+      setLikesCount(result.likesCount);
+    } catch (err: any) {
+      // Rollback optimistic update
+      setLiked(wasLiked);
+      setLikesCount(previousCount);
+      
+      if (err?.message?.includes('401')) {
+        showToast('Требуется авторизация', 'error');
+      } else if (err?.message?.includes('403')) {
+        showToast('Начните квест, чтобы поставить лайк', 'error');
+      } else if (err?.message?.includes('404')) {
+        showToast('Квест не найден', 'error');
+      } else {
+        showToast('Не удалось обновить лайк', 'error');
       }
+    } finally {
+      setIsLiking(false);
     }
   };
 
-  const handleStartQuest = () => {
-    alert('Квест запущен! В реальном приложении здесь был бы переход к началу квеста.');
+  const handleStartQuest = async () => {
+    if (!quest) return;
+    
+    if (!isAuthenticated) {
+      showToast('Войдите, чтобы начать квест', 'error');
+      return;
+    }
+
+    setIsStarting(true);
+
+    try {
+      await api.startQuest(quest.id);
+      showToast('Квест успешно запущен!', 'success');
+      
+      // Show success modal or redirect
+      setTimeout(() => {
+        // In future: navigate to quest progress page
+        // For now: just show success
+      }, 1500);
+    } catch (err: any) {
+      if (err?.message?.includes('409')) {
+        // Active quest conflict
+        setShowActiveQuestModal(true);
+      } else if (err?.message?.includes('401')) {
+        showToast('Требуется авторизация', 'error');
+      } else if (err?.message?.includes('404')) {
+        showToast('Квест не найден', 'error');
+      } else {
+        showToast('Не удалось запустить квест', 'error');
+      }
+    } finally {
+      setIsStarting(false);
+    }
+  };
+
+  const handlePauseQuest = async () => {
+    if (!quest) return;
+    
+    setIsPausing(true);
+
+    try {
+      await api.pauseQuest(quest.id);
+      showToast('Квест поставлен на паузу', 'success');
+      
+      // Reload quest data to update status
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } catch (err: any) {
+      if (err?.message?.includes('401')) {
+        showToast('Требуется авторизация', 'error');
+      } else if (err?.message?.includes('404')) {
+        showToast('Квест не найден', 'error');
+      } else {
+        showToast('Не удалось приостановить квест', 'error');
+      }
+    } finally {
+      setIsPausing(false);
+    }
+  };
+
+  const handleAbandonQuest = async () => {
+    if (!quest) return;
+    
+    setIsAbandoning(true);
+
+    try {
+      await api.abandonQuest(quest.id);
+      showToast('Вы отказались от квеста', 'success');
+      
+      // Redirect to home after abandoning
+      setTimeout(() => {
+        navigate('/');
+      }, 1000);
+    } catch (err: any) {
+      if (err?.message?.includes('401')) {
+        showToast('Требуется авторизация', 'error');
+      } else if (err?.message?.includes('404')) {
+        showToast('Квест не найден', 'error');
+      } else {
+        showToast('Не удалось отказаться от квеста', 'error');
+      }
+    } finally {
+      setIsAbandoning(false);
+      setShowAbandonConfirm(false);
+    }
   };
 
   if (loading) {
@@ -119,17 +269,28 @@ export default function QuestDetail() {
           <div className="p-8">
             {/* Stats Row */}
             <div className="flex flex-wrap items-center gap-6 mb-8 pb-6 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex items-center">
-                <button
-                  onClick={handleLike}
-                  className={`flex items-center ${liked ? 'text-red-500' : 'text-gray-500 hover:text-red-500'} transition-colors`}
-                >
-                  <Heart className={`w-6 h-6 mr-2 ${liked ? 'fill-current' : ''}`} />
-                  <span className="font-semibold text-lg">
-                    {quest.likesCount + (liked ? 1 : 0)}
-                  </span>
-                </button>
-              </div>
+              {isAuthenticated && (
+                <div className="flex items-center">
+                  <button
+                    onClick={handleLike}
+                    disabled={isLiking}
+                    className={`flex items-center ${
+                      liked ? 'text-red-500' : 'text-gray-500 hover:text-red-500'
+                    } transition-all duration-200 ${
+                      isLiking ? 'opacity-50 cursor-not-allowed' : ''
+                    } ${liked ? 'transform scale-110' : ''}`}
+                  >
+                    {isLiking ? (
+                      <Loader2 className="w-6 h-6 mr-2 animate-spin" />
+                    ) : (
+                      <Heart className={`w-6 h-6 mr-2 ${liked ? 'fill-current' : ''}`} />
+                    )}
+                    <span className="font-semibold text-lg">
+                      {likesCount}
+                    </span>
+                  </button>
+                </div>
+              )}
 
               <span className={`px-4 py-2 rounded-full text-sm font-medium ${
                 difficultyColors[quest.difficulty as keyof typeof difficultyColors] || 
@@ -170,18 +331,103 @@ export default function QuestDetail() {
               </p>
             </div>
 
-            {/* Start Quest Button */}
-            <div className="flex justify-center">
+            {/* Quest Action Buttons */}
+            {quest.questStatus === 'active' ? (
+              // Active quest: Show Pause and Abandon buttons
+              <div className="flex justify-center gap-4">
+                <button
+                  onClick={handlePauseQuest}
+                  disabled={isPausing}
+                  className={`bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold py-4 px-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2 ${
+                    isPausing ? 'opacity-75 cursor-not-allowed' : ''
+                  }`}
+                >
+                  {isPausing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Pause className="w-5 h-5" />}
+                  {isPausing ? 'Пауза...' : 'Поставить на паузу'}
+                </button>
+                
+                <button
+                  onClick={() => setShowAbandonConfirm(true)}
+                  disabled={isAbandoning}
+                  className={`bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold py-4 px-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2 ${
+                    isAbandoning ? 'opacity-75 cursor-not-allowed' : ''
+                  }`}
+                >
+                  {isAbandoning ? <Loader2 className="w-5 h-5 animate-spin" /> : <XCircle className="w-5 h-5" />}
+                  {isAbandoning ? 'Отказ...' : 'Отказаться'}
+                </button>
+              </div>
+            ) : (
+              // Not active: Show Start button
+              <div className="flex justify-center">
+                <button
+                  onClick={handleStartQuest}
+                  disabled={isStarting}
+                  className={`bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold py-4 px-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 flex items-center gap-2 ${
+                    isStarting ? 'opacity-75 cursor-not-allowed' : ''
+                  }`}
+                >
+                  {isStarting && <Loader2 className="w-5 h-5 animate-spin" />}
+                  {isStarting ? 'Запуск...' : 'Начать квест'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </main>
+
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+          duration={toast.type === 'success' ? 3000 : 5000}
+        />
+      )}
+
+      {/* Active Quest Modal */}
+      <ActiveQuestModal
+        isOpen={showActiveQuestModal}
+        onClose={() => setShowActiveQuestModal(false)}
+        activeQuestTitle="Текущий активный квест"
+        onGoToQuest={() => {
+          setShowActiveQuestModal(false);
+          // In future: navigate to active quest
+          showToast('Переход к активному квесту', 'success');
+        }}
+      />
+
+      {/* Abandon Confirmation Modal */}
+      {showAbandonConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+              Подтвердите действие
+            </h3>
+            <p className="text-gray-600 dark:text-gray-300 mb-6">
+              Вы уверены, что хотите отказаться от квеста? Весь прогресс будет удалён.
+            </p>
+            <div className="flex gap-3">
               <button
-                onClick={handleStartQuest}
-                className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold py-4 px-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                onClick={() => setShowAbandonConfirm(false)}
+                className="flex-1 px-4 py-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                disabled={isAbandoning}
               >
-                Начать квест
+                Отмена
+              </button>
+              <button
+                onClick={handleAbandonQuest}
+                className="flex-1 px-4 py-3 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 transition-colors flex items-center justify-center gap-2"
+                disabled={isAbandoning}
+              >
+                {isAbandoning && <Loader2 className="w-4 h-4 animate-spin" />}
+                {isAbandoning ? 'Удаление...' : 'Отказаться'}
               </button>
             </div>
           </div>
         </div>
-      </main>
+      )}
     </div>
   );
 }

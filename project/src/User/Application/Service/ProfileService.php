@@ -9,11 +9,15 @@ use App\User\Domain\Entity\User;
 use App\User\Domain\Exception\UserAlreadyExistsException;
 use App\User\Domain\Exception\UserNotFoundException;
 use App\User\Domain\Repository\UserRepositoryInterface;
+use App\UserProgress\Domain\Repository\UserQuestProgressRepositoryInterface;
+use App\Quest\Domain\Repository\QuestRepositoryInterface;
 
 final class ProfileService
 {
     public function __construct(
         private UserRepositoryInterface $userRepository,
+        private UserQuestProgressRepositoryInterface $progressRepository,
+        private QuestRepositoryInterface $questRepository,
     ) {
     }
 
@@ -49,6 +53,72 @@ final class ProfileService
             'id' => (string) $user->getId(),
             'username' => $user->getUsername(),
             'createdAt' => $user->getCreatedAt()->format('Y-m-d H:i:s'),
+        ];
+    }
+
+    /**
+     * Возвращает публичный профиль с историей квестов
+     *
+     * @return array<string, mixed>
+     */
+    public function getPublicProfileWithQuestHistory(string $username): array
+    {
+        $user = $this->userRepository->findByUsername($username);
+
+        if ($user === null) {
+            throw UserNotFoundException::withUsername($username);
+        }
+
+        $profile = [
+            'id' => (string) $user->getId(),
+            'username' => $user->getUsername(),
+            'createdAt' => $user->getCreatedAt()->format('Y-m-d H:i:s'),
+        ];
+
+        // Получаем активный квест
+        $activeQuest = $this->progressRepository->findActiveByUserId($user->getId());
+        $profile['activeQuest'] = $activeQuest ? $this->formatQuestProgress($activeQuest) : null;
+
+        // Получаем квесты на паузе
+        $pausedQuests = $this->progressRepository->findByUserIdWithFilters($user->getId(), 'paused', null);
+        $profile['pausedQuests'] = array_map(
+            fn($progress) => $this->formatQuestProgress($progress),
+            $pausedQuests
+        );
+
+        // Получаем 5 последних завершённых квестов
+        $completedQuests = $this->progressRepository->findByUserIdWithFilters($user->getId(), 'completed', null);
+        // Сортируем по дате завершения (новые первыми) и берём первые 5
+        usort($completedQuests, fn($a, $b) => $b->getCompletedAt() <=> $a->getCompletedAt());
+        $profile['completedQuests'] = array_map(
+            fn($progress) => $this->formatQuestProgress($progress),
+            array_slice($completedQuests, 0, 5)
+        );
+
+        return $profile;
+    }
+
+    /**
+     * Форматирует прогресс квеста для ответа
+     *
+     * @return array<string, mixed>
+     */
+    private function formatQuestProgress($progress): array
+    {
+        $quest = $this->questRepository->findById($progress->getQuestId());
+        
+        return [
+            'quest' => [
+                'id' => (string) $progress->getQuestId(),
+                'title' => $quest?->getTitle() ?? 'Unknown',
+                'imageUrl' => $quest?->getImageUrl(),
+                'difficulty' => $quest?->getDifficulty(),
+                'city' => $quest?->getCity(),
+            ],
+            'status' => $progress->getStatus()->value,
+            'isLiked' => $progress->isLiked(),
+            'startedAt' => $progress->getCreatedAt()->format('Y-m-d H:i:s'),
+            'completedAt' => $progress->getCompletedAt()?->format('Y-m-d H:i:s'),
         ];
     }
 

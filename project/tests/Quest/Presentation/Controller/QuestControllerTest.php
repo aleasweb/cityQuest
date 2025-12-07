@@ -43,9 +43,12 @@ class QuestControllerTest extends WebTestCase
         $this->assertResponseIsSuccessful();
         $this->assertResponseHeaderSame('content-type', 'application/json');
         
-        $data = json_decode($client->getResponse()->getContent(), true);
+        $response = json_decode($client->getResponse()->getContent(), true);
         
-        $this->assertIsArray($data);
+        $this->assertIsArray($response);
+        $this->assertArrayHasKey('data', $response);
+        $data = $response['data'];
+        
         $this->assertEquals((string) $quest->getId(), $data['id']);
         $this->assertEquals('Integration Test Quest', $data['title']);
         $this->assertEquals('Test description for integration', $data['description']);
@@ -101,8 +104,9 @@ class QuestControllerTest extends WebTestCase
         // Должен вернуть 200, а не 401
         $this->assertResponseIsSuccessful();
         
-        $data = json_decode($client->getResponse()->getContent(), true);
-        $this->assertEquals('Public Access Test Quest', $data['title']);
+        $response = json_decode($client->getResponse()->getContent(), true);
+        $this->assertArrayHasKey('data', $response);
+        $this->assertEquals('Public Access Test Quest', $response['data']['title']);
     }
 
     public function testGetQuestsReturnsListOfQuests(): void

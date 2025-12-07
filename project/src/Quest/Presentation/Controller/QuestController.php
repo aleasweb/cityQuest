@@ -7,7 +7,11 @@ namespace App\Quest\Presentation\Controller;
 use App\Quest\Application\Service\QuestService;
 use App\Quest\Application\Service\QuestListService;
 use App\Quest\Domain\Exception\QuestNotFoundException;
+use App\User\Domain\Entity\User;
+use App\User\Domain\Repository\UserRepositoryInterface;
 use App\UserProgress\Application\Service\QuestLikeService;
+use App\UserProgress\Domain\Exception\QuestNotStartedException;
+use App\UserProgress\Domain\Repository\UserQuestProgressRepositoryInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -19,7 +23,10 @@ class QuestController extends AbstractController
 {
     public function __construct(
         private QuestService $questService,
+        private QuestLikeService $questLikeService,
         private QuestListService $questListService,
+        private UserRepositoryInterface $userRepository,
+        private UserQuestProgressRepositoryInterface $progressRepository,
     ) {
     }
 
@@ -56,11 +63,9 @@ class QuestController extends AbstractController
             
             // Получаем маппинг городов и преобразуем названия
             $cities = $this->getParameter('app.cities');
-            if (isset($result['data'])) {
-                foreach ($result['data'] as &$quest) {
-                    if (isset($quest['city']) && isset($cities[$quest['city']])) {
-                        $quest['city'] = $cities[$quest['city']];
-                    }
+            foreach ($result['data'] as &$quest) {
+                if (isset($quest['city']) && isset($cities[$quest['city']])) {
+                    $quest['city'] = $cities[$quest['city']];
                 }
             }
             
@@ -104,11 +109,9 @@ class QuestController extends AbstractController
             
             // Получаем маппинг городов и преобразуем названия
             $cities = $this->getParameter('app.cities');
-            if (isset($result['data'])) {
-                foreach ($result['data'] as &$quest) {
-                    if (isset($quest['city']) && isset($cities[$quest['city']])) {
-                        $quest['city'] = $cities[$quest['city']];
-                    }
+            foreach ($result['data'] as &$quest) {
+                if (isset($quest['city']) && isset($cities[$quest['city']])) {
+                    $quest['city'] = $cities[$quest['city']];
                 }
             }
             
@@ -128,6 +131,7 @@ class QuestController extends AbstractController
 
     /**
      * Получить квест по ID (публичный endpoint).
+     * Для авторизованных пользователей добавляет isLikedByCurrentUser.
      */
     #[Route('/api/quests/{id}', name: 'api_quests_get', methods: ['GET'])]
     public function getQuest(string $id): JsonResponse
@@ -151,7 +155,29 @@ class QuestController extends AbstractController
                 $quest['city'] = $cities[$quest['city']];
             }
             
-            return $this->json($quest);
+            // Проверяем статус квеста для текущего пользователя
+            $securityUser = $this->getUser();
+            if ($securityUser) {
+                // Получаем полный User entity из репозитория
+                $user = $this->userRepository->findByUsername($securityUser->getUserIdentifier());
+                if ($user) {
+                    $progress = $this->progressRepository->findByUserIdAndQuestId($user->getId(), $questId);
+                    $quest['isStartedByCurrentUser'] = $progress !== null;
+                    $quest['isLikedByCurrentUser'] = $progress?->isLiked() ?? false;
+                    $quest['questStatus'] = $progress?->getStatus()->value ?? null;
+                } else {
+                    $quest['isStartedByCurrentUser'] = false;
+                    $quest['isLikedByCurrentUser'] = false;
+                    $quest['questStatus'] = null;
+                }
+            } else {
+                $quest['isStartedByCurrentUser'] = false;
+                $quest['isLikedByCurrentUser'] = false;
+                $quest['questStatus'] = null;
+            }
+            
+            // Оборачиваем в data для консистентности с другими endpoints
+            return $this->json(['data' => $quest]);
         } catch (QuestNotFoundException $e) {
             return $this->json(
                 ['error' => $e->getMessage()],
@@ -183,10 +209,24 @@ class QuestController extends AbstractController
         }
 
         try {
-            $user = $this->getUser();
-            $userId = Uuid::fromString($user->getUserIdentifier());
+            $securityUser = $this->getUser();
+            if (!$securityUser) {
+                return $this->json(
+                    ['error' => 'Authentication required'],
+                    Response::HTTP_UNAUTHORIZED
+                );
+            }
+            
+            // Получаем полный User entity из репозитория
+            $user = $this->userRepository->findByUsername($securityUser->getUserIdentifier());
+            if (!$user) {
+                return $this->json(
+                    ['error' => 'User not found'],
+                    Response::HTTP_UNAUTHORIZED
+                );
+            }
 
-            $result = $this->questLikeService->toggleLike($userId, $questId);
+            $result = $this->questLikeService->toggleLike($user->getId(), $questId);
 
             return $this->json([
                 'message' => $result['liked'] ? 'Quest liked' : 'Quest unliked',
@@ -196,6 +236,11 @@ class QuestController extends AbstractController
             return $this->json(
                 ['error' => 'Quest not found'],
                 Response::HTTP_NOT_FOUND
+            );
+        } catch (QuestNotStartedException $e) {
+            return $this->json(
+                ['error' => 'Quest must be started before it can be liked'],
+                Response::HTTP_FORBIDDEN
             );
         } catch (\Exception $e) {
             return $this->json(

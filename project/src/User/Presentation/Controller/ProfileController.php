@@ -38,12 +38,19 @@ class ProfileController extends AbstractController
 
     /**
      * Получить публичный профиль пользователя по username (публичный endpoint).
+     * Query параметр: ?includeQuests=true для включения истории квестов
      */
     #[Route('/api/users/{username}', name: 'api_users_public_profile', methods: ['GET'])]
-    public function getPublicProfile(string $username): JsonResponse
+    public function getPublicProfile(string $username, Request $request): JsonResponse
     {
         try {
-            $profile = $this->profileService->getPublicProfile($username);
+            $includeQuests = $request->query->get('includeQuests') === 'true';
+
+            if ($includeQuests) {
+                $profile = $this->profileService->getPublicProfileWithQuestHistory($username);
+            } else {
+                $profile = $this->profileService->getPublicProfile($username);
+            }
 
             return $this->json($profile);
         } catch (UserNotFoundException $e) {

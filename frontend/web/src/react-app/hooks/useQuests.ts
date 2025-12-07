@@ -26,7 +26,7 @@ export function useQuests(filters: QuestFilters) {
     };
 
     fetchQuests();
-  }, [filters.city, filters.difficulty]);
+  }, [filters.city, filters.difficulty, filters.isPopular]);
 
   return { quests, loading, error };
 }

@@ -100,6 +100,22 @@ class UserProgressService
     }
 
     /**
+     * Abandon a quest (delete progress)
+     * 
+     * @throws ProgressNotFoundException If progress doesn't exist
+     */
+    public function abandonQuest(Uuid $userId, Uuid $questId): void
+    {
+        $progress = $this->progressRepository->findByUserIdAndQuestId($userId, $questId);
+        
+        if ($progress === null) {
+            throw ProgressNotFoundException::forUserAndQuest($userId, $questId);
+        }
+
+        $this->progressRepository->delete($progress);
+    }
+
+    /**
      * Get user progress with filters
      * 
      * @param Uuid $userId
