@@ -162,43 +162,6 @@ export const QuestCard: React.FC<QuestCardProps> = ({
 - Functional components предпочтительнее классовых
 - Destructuring для props
 
-### Git Commit Messages
-
-#### Формат
-```
-<type>(<scope>): <subject>
-
-<body>
-
-<footer>
-```
-
-#### Types
-- `feat`: Новая функциональность
-- `fix`: Исправление бага
-- `docs`: Документация
-- `style`: Форматирование кода
-- `refactor`: Рефакторинг
-- `test`: Тесты
-- `chore`: Рутинные задачи
-
-#### Примеры
-```
-feat(auth): add user registration endpoint
-
-Implemented POST /api/auth/register with email validation
-and password hashing using Symfony Security Bundle.
-
-Closes #123
-```
-
-```
-fix(quest): correct distance calculation
-
-Fixed bug in geolocation distance calculation that was
-causing incorrect results for quests near meridian.
-```
-
 ### Именование
 
 #### Backend (PHP)
