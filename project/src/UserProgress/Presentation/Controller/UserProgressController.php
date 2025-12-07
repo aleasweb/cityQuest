@@ -6,6 +6,7 @@ namespace App\UserProgress\Presentation\Controller;
 
 use App\Quest\Domain\Exception\QuestNotFoundException;
 use App\Shared\Presentation\Trait\AuthenticationTrait;
+use App\User\Domain\Entity\User;
 use App\UserProgress\Application\Service\UserProgressService;
 use App\UserProgress\Domain\Exception\ActiveQuestExistsException;
 use App\UserProgress\Domain\Exception\InvalidQuestStatusException;
@@ -38,6 +39,7 @@ class UserProgressController extends AbstractController
         if ($user instanceof JsonResponse) {
             return $user;
         }
+        assert($user instanceof User);
         $userId = $user->getId();
 
         $status = $request->query->get('status');
@@ -76,6 +78,7 @@ class UserProgressController extends AbstractController
             if ($user instanceof JsonResponse) {
                 return $user;
             }
+            assert($user instanceof User);
             $userId = $user->getId();
             $questUuid = Uuid::fromString($questId);
 
@@ -118,6 +121,7 @@ class UserProgressController extends AbstractController
             if ($user instanceof JsonResponse) {
                 return $user;
             }
+            assert($user instanceof User);
             $userId = $user->getId();
             $questUuid = Uuid::fromString($questId);
 
@@ -160,6 +164,7 @@ class UserProgressController extends AbstractController
             if ($user instanceof JsonResponse) {
                 return $user;
             }
+            assert($user instanceof User);
             $userId = $user->getId();
             $questUuid = Uuid::fromString($questId);
 
@@ -184,6 +189,44 @@ class UserProgressController extends AbstractController
         } catch (\Exception $e) {
             return $this->json([
                 'error' => 'Failed to complete quest',
+                'message' => $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * Abandon a quest (delete progress)
+     * 
+     * DELETE /api/user/progress/{questId}
+     */
+    #[Route('/{questId}', name: 'delete', methods: ['DELETE'])]
+    public function abandonQuest(string $questId): JsonResponse
+    {
+        try {
+            $user = $this->getAuthenticatedUserOr401Response();
+            if ($user instanceof JsonResponse) {
+                return $user;
+            }
+            assert($user instanceof User);
+            $userId = $user->getId();
+            $questUuid = Uuid::fromString($questId);
+
+            $this->progressService->abandonQuest($userId, $questUuid);
+
+            return $this->json([
+                'message' => 'Quest abandoned successfully',
+            ]);
+        } catch (\InvalidArgumentException $e) {
+            return $this->json([
+                'error' => 'Invalid quest ID format'
+            ], Response::HTTP_BAD_REQUEST);
+        } catch (ProgressNotFoundException $e) {
+            return $this->json([
+                'error' => 'Quest progress not found'
+            ], Response::HTTP_NOT_FOUND);
+        } catch (\Exception $e) {
+            return $this->json([
+                'error' => 'Failed to abandon quest',
                 'message' => $e->getMessage()
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }

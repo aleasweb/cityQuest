@@ -12,6 +12,9 @@ export const QuestSchema = z.object({
   author: z.string().nullable(),
   likesCount: z.number(),
   isPopular: z.boolean(),
+  isLikedByCurrentUser: z.boolean().optional(), // Для авторизованных пользователей
+  isStartedByCurrentUser: z.boolean().optional(), // Начат ли квест текущим пользователем
+  questStatus: z.enum(['active', 'paused', 'completed']).nullable().optional(), // Статус квеста для текущего пользователя
   createdAt: z.string(),
   updatedAt: z.string()
 });
@@ -20,7 +23,8 @@ export type Quest = z.infer<typeof QuestSchema>;
 
 export const QuestFiltersSchema = z.object({
   city: z.string().optional(),
-  difficulty: z.enum(['easy', 'medium', 'hard']).optional()
+  difficulty: z.enum(['easy', 'medium', 'hard']).optional(),
+  isPopular: z.boolean().optional()
 });
 
 export type QuestFilters = z.infer<typeof QuestFiltersSchema>;
@@ -45,6 +49,30 @@ export const UserProgressSchema = z.object({
 });
 
 export type UserProgress = z.infer<typeof UserProgressSchema>;
+
+// Quest Progress Types (для истории)
+export interface QuestProgressItem {
+  quest: {
+    id: string;
+    title: string;
+    imageUrl: string | null;
+    difficulty: string | null;
+    city: string | null;
+  };
+  status: 'active' | 'paused' | 'completed';
+  isLiked: boolean;
+  startedAt: string;
+  completedAt: string | null;
+}
+
+export interface UserProfileWithHistory {
+  id: string;
+  username: string;
+  createdAt: string;
+  activeQuest: QuestProgressItem | null;
+  pausedQuests: QuestProgressItem[];
+  completedQuests: QuestProgressItem[];
+}
 
 // Auth Types
 export interface RegisterData {

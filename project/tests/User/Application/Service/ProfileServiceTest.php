@@ -4,23 +4,33 @@ declare(strict_types=1);
 
 namespace App\Tests\User\Application\Service;
 
+use App\Quest\Domain\Repository\QuestRepositoryInterface;
 use App\User\Application\DTO\UpdateProfileRequest;
 use App\User\Application\Service\ProfileService;
 use App\User\Domain\Entity\User;
 use App\User\Domain\Exception\UserAlreadyExistsException;
 use App\User\Domain\Exception\UserNotFoundException;
 use App\User\Domain\Repository\UserRepositoryInterface;
+use App\UserProgress\Domain\Repository\UserQuestProgressRepositoryInterface;
 use PHPUnit\Framework\TestCase;
 
 class ProfileServiceTest extends TestCase
 {
     private UserRepositoryInterface $userRepository;
+    private UserQuestProgressRepositoryInterface $userProgressRepository;
+    private QuestRepositoryInterface $questRepository;
     private ProfileService $profileService;
 
     protected function setUp(): void
     {
         $this->userRepository = $this->createMock(UserRepositoryInterface::class);
-        $this->profileService = new ProfileService($this->userRepository);
+        $this->userProgressRepository = $this->createMock(UserQuestProgressRepositoryInterface::class);
+        $this->questRepository = $this->createMock(QuestRepositoryInterface::class);
+        $this->profileService = new ProfileService(
+            $this->userRepository,
+            $this->userProgressRepository,
+            $this->questRepository
+        );
     }
 
     public function testGetProfileReturnsUserData(): void

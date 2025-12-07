@@ -1,5 +1,5 @@
 import { jwtDecode } from 'jwt-decode';
-import type { Quest, QuestFilters, UserProgress, RegisterData, LoginData, AuthResponse, User, City } from './types';
+import type { Quest, QuestFilters, UserProgress, RegisterData, LoginData, AuthResponse, User, City, UserProfileWithHistory } from './types';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -63,6 +63,7 @@ export const api = {
     
     if (filters?.city) params.append('city', filters.city);
     if (filters?.difficulty) params.append('difficulty', filters.difficulty);
+    if (filters?.isPopular !== undefined) params.append('is_popular', filters.isPopular.toString());
     
     const query = params.toString();
     const response = await apiRequest<ApiResponse<Quest[]>>(
@@ -111,8 +112,8 @@ export const api = {
    * Переключить лайк на квесте (требует авторизации)
    * POST /quests/{id}/like
    */
-  toggleLike: async (questId: string): Promise<{ liked: boolean }> => {
-    const response = await apiRequest<{ message: string; data: { liked: boolean } }>(
+  toggleLike: async (questId: string): Promise<{ liked: boolean; likesCount: number }> => {
+    const response = await apiRequest<{ message: string; data: { liked: boolean; likesCount: number } }>(
       `/quests/${questId}/like`,
       { method: 'POST' }
     );
@@ -190,6 +191,17 @@ export const api = {
     
     return response.data;
   },
+  
+  /**
+   * Отказаться от квеста (удалить прогресс)
+   * DELETE /user/progress/{questId}
+   */
+  abandonQuest: async (questId: string): Promise<void> => {
+    await apiRequest<{ message: string }>(
+      `/user/progress/${questId}`,
+      { method: 'DELETE' }
+    );
+  },
 
   // ============ AUTHENTICATION ============
   
@@ -251,6 +263,16 @@ export const api = {
     }
   },
   
+  /**
+   * Получить профиль пользователя с историей квестов
+   * GET /users/{username}?includeQuests=true
+   */
+  getProfileWithQuestHistory: async (username: string): Promise<UserProfileWithHistory> => {
+    return apiRequest<UserProfileWithHistory>(
+      `/users/${username}?includeQuests=true`
+    );
+  },
+
   /**
    * Проверка текущего пользователя
    */

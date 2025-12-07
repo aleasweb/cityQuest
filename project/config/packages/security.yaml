@@ -26,12 +26,14 @@ security:
             stateless: true
             security: false
         
-        # Public quests GET endpoints only (GET /api/quests, GET /api/quests/nearby, GET /api/quests/{id})
+        # Quests GET endpoints - optional JWT (can be accessed by both authenticated and anonymous users)
+        # JWT will be checked if present, but not required
         api_quests_public:
             pattern: ^/api/quests
             methods: [GET]
             stateless: true
-            security: false
+            provider: app_user_provider
+            jwt: ~
         
         # JWT Login endpoint
         api_login:
@@ -53,4 +55,5 @@ security:
             jwt: ~
 
     access_control:
+        - { path: ^/api/quests, methods: [GET], roles: PUBLIC_ACCESS }
         - { path: ^/, roles: PUBLIC_ACCESS } 

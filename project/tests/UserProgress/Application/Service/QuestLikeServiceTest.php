@@ -9,6 +9,7 @@ use App\Quest\Domain\Exception\QuestNotFoundException;
 use App\Quest\Domain\Repository\QuestRepositoryInterface;
 use App\UserProgress\Application\Service\QuestLikeService;
 use App\UserProgress\Domain\Entity\UserQuestProgress;
+use App\UserProgress\Domain\Exception\QuestNotStartedException;
 use App\UserProgress\Domain\Repository\UserQuestProgressRepositoryInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
@@ -34,7 +35,7 @@ class QuestLikeServiceTest extends TestCase
         );
     }
 
-    public function testToggleLikeCreatesProgressWhenNotExists(): void
+    public function testToggleLikeThrowsExceptionWhenQuestNotStarted(): void
     {
         $userId = Uuid::v4();
         $questId = Uuid::v4();
@@ -42,15 +43,10 @@ class QuestLikeServiceTest extends TestCase
 
         $this->questRepository->method('findById')->willReturn($quest);
         $this->progressRepository->method('findByUserIdAndQuestId')->willReturn(null);
-        
-        $this->entityManager->expects($this->once())->method('beginTransaction');
-        $this->entityManager->expects($this->once())->method('commit');
-        $this->progressRepository->expects($this->once())->method('save');
-        $this->questRepository->expects($this->once())->method('incrementLikesCount');
 
-        $result = $this->service->toggleLike($userId, $questId);
+        $this->expectException(QuestNotStartedException::class);
 
-        $this->assertTrue($result['liked']);
+        $this->service->toggleLike($userId, $questId);
     }
 
     public function testToggleLikeTogglesExistingLike(): void
@@ -108,6 +104,31 @@ class QuestLikeServiceTest extends TestCase
         $this->progressRepository->method('findByUserIdAndQuestId')->willReturn(null);
 
         $result = $this->service->isLiked($userId, $questId);
+
+        $this->assertFalse($result);
+    }
+
+    public function testCanLikeReturnsTrueWhenQuestIsStarted(): void
+    {
+        $userId = Uuid::v4();
+        $questId = Uuid::v4();
+        $progress = new UserQuestProgress($userId, $questId);
+
+        $this->progressRepository->method('findByUserIdAndQuestId')->willReturn($progress);
+
+        $result = $this->service->canLike($userId, $questId);
+
+        $this->assertTrue($result);
+    }
+
+    public function testCanLikeReturnsFalseWhenQuestNotStarted(): void
+    {
+        $userId = Uuid::v4();
+        $questId = Uuid::v4();
+
+        $this->progressRepository->method('findByUserIdAndQuestId')->willReturn(null);
+
+        $result = $this->service->canLike($userId, $questId);
 
         $this->assertFalse($result);
     }
