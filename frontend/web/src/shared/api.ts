@@ -1,4 +1,5 @@
-import { jwtDecode } from 'jwt-decode';
+// Phase 2: Removed jwt-decode import - no longer decode JWT on client
+// JWT is in HttpOnly cookie and user data comes from backend
 import type { Quest, QuestFilters, UserProgress, RegisterData, LoginData, AuthResponse, User, City, UserProfileWithHistory } from './types';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
@@ -14,16 +15,14 @@ interface ApiResponse<T> {
 
 /**
  * HTTP request helper with JWT authentication
+ * Phase 2: JWT now in HttpOnly cookie, removed localStorage operations
  */
 async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const token = localStorage.getItem('jwt_token');
-  
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
-    ...(token && { Authorization: `Bearer ${token}` }),
     ...options.headers,
   };
 
@@ -33,6 +32,8 @@ async function apiRequest<T>(
     const response = await fetch(url, {
       ...options,
       headers,
+      // Phase 2: Send cookies (including HttpOnly jwt_token) with every request
+      credentials: 'include',
     });
 
     const data = await response.json();
@@ -224,9 +225,11 @@ export const api = {
   /**
    * Вход в систему
    * POST /auth/login
+   * Phase 2: JWT automatically set in HttpOnly cookie by backend
+   * User data returned in response body (no need to decode JWT)
    */
   login: async (data: LoginData): Promise<AuthResponse> => {
-    const response = await apiRequest<{ token: string }>(
+    const response = await apiRequest<{ token: string; user: User }>(
       '/auth/login',
       {
         method: 'POST',
@@ -234,33 +237,23 @@ export const api = {
       }
     );
     
-    // Сохраняем токен
-    localStorage.setItem('jwt_token', response.token);
-    
-    // Декодируем JWT для получения данных пользователя
-    const payload = jwtDecode<{ sub?: string; user_id?: string; email?: string; username?: string }>(response.token);
+    // Phase 2: No localStorage operations - JWT is in HttpOnly cookie
+    // User data comes from backend in response body
     
     return {
-      token: response.token,
-      user: {
-        id: payload.sub || payload.user_id || '',
-        email: payload.email || payload.username || '',
-        username: payload.username || payload.email || '',
-        createdAt: new Date().toISOString(),
-      },
+      token: response.token, // Still returned for backward compatibility
+      user: response.user,
     };
   },
   
   /**
    * Выход из системы
    * POST /auth/logout
+   * Phase 2: HttpOnly cookie will expire automatically, no localStorage to clean
    */
   logout: async (): Promise<void> => {
-    try {
-      await apiRequest('/auth/logout', { method: 'POST' });
-    } finally {
-      localStorage.removeItem('jwt_token');
-    }
+    await apiRequest('/auth/logout', { method: 'POST' });
+    // Phase 2: No localStorage operations - cookie handled by browser
   },
   
   /**
@@ -275,39 +268,23 @@ export const api = {
 
   /**
    * Проверка текущего пользователя
+   * Phase 2: Calls backend /auth/me to get user data (JWT in HttpOnly cookie)
+   * No JWT decoding on client - more secure approach
    */
   getCurrentUser: async (): Promise<User | null> => {
-    const token = localStorage.getItem('jwt_token');
-    
-    if (!token) {
-      return null;
-    }
-    
     try {
-      // Декодируем JWT
-      const payload = jwtDecode<{ 
-        sub?: string; 
-        user_id?: string; 
-        email?: string; 
-        username?: string; 
-        exp?: number 
-      }>(token);
+      // Phase 2: Call backend endpoint with credentials (HttpOnly cookie sent automatically)
+      const response = await apiRequest<{ data: { user: User } }>(
+        '/auth/me',
+        {
+          method: 'GET',
+        }
+      );
       
-      // Проверяем срок действия
-      if (payload.exp && payload.exp * 1000 < Date.now()) {
-        localStorage.removeItem('jwt_token');
-        return null;
-      }
-      
-      return {
-        id: payload.sub || payload.user_id || '',
-        email: payload.email || payload.username || '',
-        username: payload.username || payload.email || '',
-        createdAt: new Date().toISOString(),
-      };
+      return response.data.user;
     } catch (error) {
-      console.error('Failed to decode JWT:', error);
-      localStorage.removeItem('jwt_token');
+      // 401 Unauthorized means no valid JWT cookie - user not logged in
+      console.log('User not authenticated');
       return null;
     }
   },

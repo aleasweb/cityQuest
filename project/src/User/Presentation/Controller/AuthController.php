@@ -8,6 +8,7 @@ use App\User\Application\DTO\RegisterUserRequest;
 use App\User\Application\Service\AuthenticationService;
 use App\User\Domain\Exception\UserAlreadyExistsException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -84,7 +85,54 @@ class AuthController extends AbstractController
     #[Route('/logout', name: 'logout', methods: ['POST'])]
     public function logout(): JsonResponse
     {
-        // JWT is stateless, logout is handled on client side by removing the token
-        return $this->json(['message' => 'Logged out successfully']);
+        // Phase 2: Clear HttpOnly JWT cookie by setting it with expired date
+        $response = $this->json(['message' => 'Logged out successfully']);
+        
+        // Clear jwt_token cookie (HttpOnly, same path as set by lexik_jwt)
+        $response->headers->setCookie(
+            Cookie::create(
+                'jwt_token',
+                '', // empty value
+                1, // expires at Unix epoch (Jan 1, 1970) - effectively deletes cookie
+                '/', // same path as in lexik_jwt config
+                null, // domain - null means current domain
+                false, // secure - false for development, true for production with HTTPS
+                true, // httpOnly - must match lexik_jwt config
+                false, // raw
+                Cookie::SAMESITE_STRICT // same as lexik_jwt config
+            )
+        );
+        
+        return $response;
+    }
+
+    /**
+     * Get current authenticated user
+     * Phase 2: Returns user data without requiring JWT decoding on client
+     * 
+     * @return JsonResponse User data or 401 Unauthorized
+     */
+    #[Route('/me', name: 'me', methods: ['GET'])]
+    public function getCurrentUser(): JsonResponse
+    {
+        $user = $this->getUser();
+        
+        if (!$user) {
+            return $this->json(
+                ['error' => 'Unauthorized', 'message' => 'Valid JWT token required'],
+                Response::HTTP_UNAUTHORIZED
+            );
+        }
+
+        return $this->json([
+            'data' => [
+                'user' => [
+                    'id' => $user->getId()->toRfc4122(),
+                    'email' => $user->getEmail(),
+                    'username' => $user->getUsername(),
+                    'createdAt' => $user->getCreatedAt()->format('Y-m-d H:i:s'),
+                ],
+            ],
+        ]);
     }
 }

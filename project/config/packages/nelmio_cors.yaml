@@ -9,11 +9,14 @@ nelmio_cors:
     paths:
         '^/api':
             origin_regex: true
+            # Phase 2: Enable credentials for HttpOnly cookies
+            allow_credentials: true
             allow_origin:
                 - '^https?://(localhost|127\.0\.0\.1|cityquest\.test)(:[0-9]+)?$'
                 - '^https://cityquest\.ru$'  # ваш production домен
             allow_methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
-            allow_headers: ['Content-Type', 'Authorization', 'Accept']
+            # Phase 2: Added X-CSRF-Token for Phase 4 preparation
+            allow_headers: ['Content-Type', 'Authorization', 'Accept', 'X-CSRF-Token']
             expose_headers: ['Link']
             max_age: 3600
 
