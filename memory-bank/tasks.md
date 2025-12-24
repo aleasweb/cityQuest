@@ -439,114 +439,645 @@ const handleStartQuest = async () => {
 
 **ID задачи:** CQST-008  
 **Дата создания:** 2025-12-06  
-**Статус:** 📋 ЗАПЛАНИРОВАНО  
+**Дата Phase 1:** 2025-12-24  
+**Дата Phase 2:** 2025-12-24  
+**Дата Reflection:** 2025-12-24  
+**Дата Архивации:** 2025-12-24  
+**Статус:** ✅ ЗАВЕРШЕНО И ЗААРХИВИРОВАНО  
 **Тип:** Level 3 - Intermediate Feature  
-**Приоритет:** 🔴 КРИТИЧНО (Безопасность)
+**Приоритет:** ✅ ВЫПОЛНЕНО (критичные фазы завершены)  
+**Complexity:** Level 3 (фазы 1-2 завершены)
 
-#### Описание
-Усиление безопасности хранения и передачи JWT токенов на фронтенде. Миграция с localStorage на HttpOnly cookies, добавление security headers, реализация защиты от XSS, CSRF и других атак.
+**Реализовано:** Phases 1-2 (Security Headers + HttpOnly Cookies)  
+**Отменено:** Phases 3-4 (Refresh Token + CSRF)
 
-#### Выявленные уязвимости
+**Документация:**
+- Reflection: `memory-bank/reflection/reflection-CQST-008.md`
+- Archive: `memory-bank/archive/archive-CQST-008-20251224.md`
 
-**🔴 Критические:**
-- JWT токен в localStorage → уязвим к XSS атакам
-- Отсутствие Content-Security-Policy
-- Отсутствие защитных HTTP заголовков
+---
 
-**🟡 Средние:**
-- Отсутствие CSRF защиты
-- Отсутствие Clickjacking защиты
-- Отсутствие Refresh Token механизма
+## 📋 REQUIREMENTS ANALYSIS
 
-#### Чек-лист задач
+### Функциональные требования
 
-**Фаза 1: Security Headers (Немедленно)** 🎯 P1
-- [ ] Добавить X-Frame-Options: DENY в Nginx
-- [ ] Добавить X-Content-Type-Options: nosniff
-- [ ] Добавить X-XSS-Protection: 1; mode=block
-- [ ] Добавить Referrer-Policy: strict-origin-when-cross-origin
-- [ ] Добавить Content-Security-Policy (базовый)
-- [ ] Добавить CSP Meta tag в index.html (временно)
-- [ ] Протестировать headers через curl/browser devtools
+**Phase 1: Security Headers (Level 1)**
+- HTTP security headers для защиты от XSS, Clickjacking, MIME sniffing
+- CSP Meta tag в HTML (временная мера)
+- Возможность верификации headers через curl/devtools
 
-**Фаза 2: HttpOnly Cookies Migration** 🎯 P1
-- [ ] Backend: Настроить lexik_jwt cookie extraction
-- [ ] Backend: Установить HttpOnly, Secure, SameSite=Strict
-- [ ] Backend: Вернуть user объект отдельно от токена в /auth/login
-- [ ] Frontend: Убрать localStorage.setItem('jwt_token')
-- [ ] Frontend: Убрать localStorage.getItem('jwt_token')
-- [ ] Frontend: Добавить credentials: 'include' в fetch запросы
-- [ ] Frontend: Убрать декодирование JWT на клиенте
-- [ ] Протестировать login/logout flow
-- [ ] Обновить документацию (auth-reference.md)
+**Phase 2: HttpOnly Cookies (Level 3)**
+- JWT токен в HttpOnly cookie (недоступен для JS)
+- Автоматическая отправка токена с каждым запросом
+- Endpoint GET /api/auth/me для получения user data
+- Удаление localStorage JWT storage
 
-**Фаза 3: Refresh Token Mechanism** 🎯 P2
-- [ ] Backend: Создать RefreshToken entity
-- [ ] Backend: Endpoint POST /auth/refresh
-- [ ] Backend: Короткий TTL access token (15 мин)
-- [ ] Backend: Длинный TTL refresh token (7 дней)
-- [ ] Frontend: Автообновление токена перед истечением
-- [ ] Frontend: Logout при истечении refresh token
-- [ ] Тесты для refresh flow
+**Phase 3: Refresh Token (Level 3-4)**
+- Access token: 15 минут lifetime
+- Refresh token: 7 дней lifetime
+- Автоматическое обновление токена
+- Token rotation механизм
 
-**Фаза 4: CSRF Protection** 🎯 P2
-- [ ] Backend: Генерация CSRF токена
-- [ ] Backend: Endpoint GET /api/csrf-token
-- [ ] Backend: Валидация X-CSRF-Token заголовка
-- [ ] Frontend: Получение CSRF токена при инициализации
-- [ ] Frontend: Добавление X-CSRF-Token в мутирующие запросы
-- [ ] Тесты для CSRF защиты
+**Phase 4: CSRF Protection (Level 2)**
+- CSRF token для мутирующих операций
+- Endpoint для получения CSRF token
+- Валидация CSRF token на backend
 
-**Фаза 5: Production Hardening** 🎯 P3
-- [ ] Добавить Strict-Transport-Security для HTTPS
-- [ ] Настроить строгий CSP (убрать unsafe-inline)
-- [ ] Добавить rate limiting для auth endpoints
-- [ ] Настроить логирование подозрительной активности
-- [ ] Security audit через OWASP ZAP/Burp Suite
+### Нефункциональные требования
 
-#### Технические детали
+- **Безопасность:** Защита от XSS, CSRF, Clickjacking
+- **Производительность:** Минимальный overhead при каждом запросе
+- **Совместимость:** Работа во всех современных браузерах
+- **Тестируемость:** Возможность автоматизированного тестирования
 
-**Текущая архитектура:**
-- JWT хранится в `localStorage['jwt_token']`
-- Токен добавляется в Authorization header вручную
-- Декодирование JWT на клиенте для получения user data
+### Ограничения
 
-**Целевая архитектура:**
-- JWT в HttpOnly cookie (недоступен для JavaScript)
-- Автоматическая отправка cookie с credentials: 'include'
-- User data приходит с backend, не из JWT
-- Access token (15 мин) + Refresh token (7 дней)
-- CSRF токен для мутирующих операций
-- Полный набор Security Headers
+- Symfony 6+ с lexik/jwt-authentication-bundle
+- React 18 frontend
+- Nginx как reverse proxy
+- Требование поддержки CORS для credentials
 
-#### Метрики безопасности
+---
 
-**До улучшений:**
-- 🔴 XSS Risk: Критический
-- 🟠 CSRF Risk: Высокий
-- 🟡 Clickjacking Risk: Средний
+## 🔍 COMPONENT ANALYSIS
+
+### Затронутые компоненты
+
+**Backend (Symfony):**
+- `docker/nginx/conf.d/default.conf` - security headers
+- `project/config/packages/lexik_jwt_authentication.yaml` - cookie config
+- `project/config/packages/nelmio_cors.yaml` - CORS credentials
+- `project/src/User/Presentation/AuthController.php` - auth endpoints
+- `project/config/routes/security.yaml` - новый route для /auth/me
+- **НОВЫЙ:** `project/src/User/Entity/RefreshToken.php` (Phase 3)
+- **НОВЫЙ:** `project/src/User/Repository/RefreshTokenRepository.php` (Phase 3)
+- **НОВЫЙ:** `project/src/Security/CsrfTokenService.php` (Phase 4)
+
+**Frontend (React):**
+- `frontend/web/index.html` - CSP meta tag
+- `frontend/web/src/shared/api.ts` - credentials: 'include', удаление JWT logic
+- `frontend/web/src/shared/AuthContext.tsx` - обновление auth flow
+- **НОВЫЙ:** Token refresh interceptor (Phase 3)
+- **НОВЫЙ:** CSRF token manager (Phase 4)
+
+**Infrastructure:**
+- Docker контейнеры (rebuild для nginx config)
+- Postman collection (обновление для cookie auth)
+
+### Зависимости между компонентами
+
+```
+Phase 1 (Security Headers)
+    ├── nginx config → Headers в response
+    └── index.html → CSP meta tag
+
+Phase 2 (HttpOnly Cookies) - ЗАВИСИТ ОТ Phase 1
+    ├── lexik_jwt config → Cookie extraction
+    ├── nelmio_cors config → allow_credentials: true
+    ├── AuthController → Новый endpoint /auth/me
+    ├── api.ts → credentials: 'include'
+    └── AuthContext → Удаление localStorage logic
+
+Phase 3 (Refresh Token) - ЗАВИСИТ ОТ Phase 2
+    ├── RefreshToken Entity → Database table
+    ├── RefreshTokenRepository → CRUD operations
+    ├── AuthController → POST /auth/refresh endpoint
+    ├── Token refresh interceptor → Auto-refresh logic
+    └── Migration для refresh_tokens table
+
+Phase 4 (CSRF Protection) - ЗАВИСИТ ОТ Phase 2
+    ├── CsrfTokenService → Token generation & validation
+    ├── AuthController → GET /api/csrf-token endpoint
+    ├── Security event subscriber → CSRF validation
+    └── CSRF token manager (frontend) → Token management
+```
+
+---
+
+## 🎯 IMPLEMENTATION STRATEGY
+
+### Phase 1: Security Headers (30 минут, Level 1)
+
+**Цель:** Немедленная защита от XSS, Clickjacking, MIME sniffing
+
+**Шаги:**
+1. Обновить `docker/nginx/conf.d/default.conf`:
+   - Добавить `X-Frame-Options: DENY`
+   - Добавить `X-Content-Type-Options: nosniff`
+   - Добавить `X-XSS-Protection: 1; mode=block`
+   - Добавить `Referrer-Policy: strict-origin-when-cross-origin`
+   - Добавить базовый CSP header
+2. Обновить `frontend/web/index.html`:
+   - Добавить CSP meta tag (временная мера)
+3. Rebuild nginx container:
+   - `docker compose restart nginx`
+4. Тестирование:
+   - `curl -I http://cityquest.test | grep -E "X-Frame|X-Content|CSP"`
+   - Browser DevTools → Network → Response Headers
+
+**Критерии приёмки:**
+- ✅ Все 6 security headers присутствуют в response
+- ✅ CSP meta tag в HTML
+- ✅ Browser console без CSP violations
+
+**✅ РЕАЛИЗАЦИЯ ЗАВЕРШЕНА (2025-12-24):**
+
+**Изменённые файлы:**
+1. `docker/nginx/conf.d/default.conf` - добавлены 6 security headers в server block
+2. `frontend/web/index.html` - добавлен CSP meta tag (source file)
+3. `frontend/web/dist/index.html` - добавлен CSP meta tag (built file)
+4. `project/frontend/dist/index.html` - скопирован обновлённый dist
+
+**Security Headers реализованы:**
+```nginx
+add_header X-Frame-Options "DENY" always;
+add_header X-Content-Type-Options "nosniff" always;
+add_header X-XSS-Protection "1; mode=block" always;
+add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+add_header Permissions-Policy "geolocation=(self), microphone=(), camera=()" always;
+add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';" always;
+```
+
+**CSP Meta Tag:**
+```html
+<meta 
+  http-equiv="Content-Security-Policy" 
+  content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+/>
+```
+
+**Примечание:** `'unsafe-inline'` для script-src и style-src - временное решение до внедрения nonce-based CSP в будущем.
+
+**✅ ТЕСТИРОВАНИЕ ЗАВЕРШЕНО (2025-12-24):**
+- [x] Запущен Docker daemon ✅
+- [x] Выполнено `docker compose build nginx` ✅
+- [x] Выполнено `docker compose up -d nginx` ✅
+- [x] Протестировано через curl - все 6 headers присутствуют ✅
+- [x] Проверены API endpoints - headers работают ✅
+
+**Результаты тестирования:**
+```bash
+# Frontend (/)
+HTTP/1.1 200 OK
+X-Frame-Options: DENY
+X-Content-Type-Options: nosniff
+X-XSS-Protection: 1; mode=block
+Referrer-Policy: strict-origin-when-cross-origin
+Permissions-Policy: geolocation=(self), microphone=(), camera=()
+Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; ...
+
+# API (/api/cities)
+X-Frame-Options: DENY
+X-Content-Type-Options: nosniff
+X-XSS-Protection: 1; mode=block
+Referrer-Policy: strict-origin-when-cross-origin
+Permissions-Policy: geolocation=(self), microphone=(), camera=()
+Content-Security-Policy: [полная политика]
+```
+
+**Время реализации + тестирования:** ~30 минут ✅
+
+---
+
+### Phase 2: HttpOnly Cookies Migration (4-6 часов, Level 3)
+
+**Цель:** Защита JWT от XSS атак через HttpOnly cookies
+
+**Шаги:**
+
+**Backend (2-3 часа):**
+1. Обновить `lexik_jwt_authentication.yaml`:
+   - Добавить `token_extractors.cookie`
+   - Настроить `set_cookies` с HttpOnly, Secure, SameSite
+2. Обновить `nelmio_cors.yaml`:
+   - Изменить `allow_credentials: true`
+   - Добавить `X-CSRF-Token` в `allow_headers`
+3. Создать новый endpoint `GET /api/auth/me`:
+   - Вернуть current user data
+   - Требует JWT authentication
+4. Обновить `POST /api/auth/login`:
+   - Вернуть user object в response body
+   - JWT автоматически в cookie
+5. Тесты:
+   - Обновить `AuthControllerTest.php` для cookie auth
+   - Новый `AuthMeTest.php` для /auth/me endpoint
+
+**Frontend (2-3 часа):**
+1. Обновить `api.ts`:
+   - Убрать `localStorage.getItem('jwt_token')`
+   - Убрать `localStorage.setItem('jwt_token')`
+   - Добавить `credentials: 'include'` во все запросы
+   - Убрать `Authorization` header (токен в cookie)
+2. Обновить `AuthContext.tsx`:
+   - Убрать `jwt_decode()` usage
+   - Использовать `api.getCurrentUser()` вместо декодирования
+   - Обновить login flow (user из response.data.user)
+3. Создать новый метод `api.getCurrentUser()`:
+   - `GET /api/auth/me`
+   - Return `User | null`
+4. Обновить logout:
+   - Backend очищает cookie (уже работает)
+   - Frontend очищает context state
+
+**Testing (30 минут):**
+- Manual: Login → cookie в DevTools → API requests работают
+- Manual: Logout → cookie удалён
+- Manual: `localStorage.getItem('jwt_token')` → null ✅
+- Automated: PHPUnit tests для cookie auth
+- Browser: Console без ошибок CORS
+
+**Критерии приёмки:**
+- ✅ JWT токен в HttpOnly cookie (не виден в localStorage)
+- ✅ GET /api/auth/me возвращает user data
+- ✅ Login/logout flow работает
+- ✅ Все API requests работают с cookies
+- ✅ CORS для credentials настроен корректно
+- ✅ Tests проходят (85+ tests)
+
+**✅ РЕАЛИЗАЦИЯ И ТЕСТИРОВАНИЕ ЗАВЕРШЕНЫ (2025-12-24):**
+
+**Реализованные файлы (Backend):**
+1. `project/config/packages/lexik_jwt_authentication.yaml` - token_extractors + set_cookies с HttpOnly
+2. `project/config/packages/nelmio_cors.yaml` - allow_credentials: true для cookies
+3. `project/src/User/Presentation/Controller/AuthController.php` - новый endpoint GET /api/auth/me
+4. `project/src/User/Presentation/Controller/AuthController.php` - logout с явным удалением cookie
+5. `project/src/User/Infrastructure/EventSubscriber/JWTAuthenticationSubscriber.php` - добавляет user в login response
+
+**Реализованные файлы (Frontend):**
+1. `frontend/web/src/shared/api.ts` - убраны все localStorage operations
+2. `frontend/web/src/shared/api.ts` - добавлен credentials: 'include' во все запросы
+3. `frontend/web/src/shared/api.ts` - login() использует user из response
+4. `frontend/web/src/shared/api.ts` - getCurrentUser() вызывает /auth/me
+5. `frontend/web/src/shared/api.ts` - logout() больше не трогает localStorage
+6. Удалён импорт jwt-decode (больше не используется)
+
+**Результаты browser testing:**
+```
+✅ Login flow работает:
+   - POST /api/auth/login возвращает {token, user}
+   - Cookie jwt_token устанавливается (HttpOnly, SameSite=Strict)
+   - User data сразу доступен без декодирования JWT
+
+✅ HttpOnly cookie verification:
+   - DevTools → Application → Cookies → jwt_token ✅
+   - Флаг HttpOnly: ✓
+   - Флаг SameSite: Strict ✓
+   - localStorage.getItem('jwt_token'): null ✓
+
+✅ API requests с cookie:
+   - Cookie автоматически отправляется с каждым запросом
+   - Authorization header отсутствует (не нужен)
+   - GET /api/quests, /api/user/progress - всё работает
+
+✅ Logout flow:
+   - POST /api/auth/logout успешен
+   - Cookie jwt_token удаляется (expires=1970)
+   - После перезагрузки страницы - не авторизован ✓
+
+✅ /auth/me endpoint:
+   - GET /api/auth/me без cookie → 401 Unauthorized
+   - GET /api/auth/me с cookie → {data: {user: {...}}}
+```
+
+**Bugs Fixed:**
+1. ✅ Config typo: `httponly` → `httpOnly` (camelCase required)
+2. ✅ Logout не удалял cookie - добавлен Cookie::create() с expires=1
+
+**Время реализации:** ~4 часа (включая тестирование и bugfixes) ✅  
+**Оценка была:** 4-6 часов ✅ (в рамках плана)
+
+**Security Improvement:**
+- 🔴 XSS Risk: Critical → 🟢 Low (JWT в HttpOnly cookie)
+- 🔴 Token Storage: localStorage → 🟢 HttpOnly Cookie
+- 🔴 JWT Decoding: Client → 🟢 Server (через /auth/me)
+- 🟢 CORS: credentials поддержка настроена
+
+---
+
+### Phase 3: Refresh Token Mechanism (8-10 часов, Level 3-4)
+
+**Цель:** Короткий TTL access token + автообновление через refresh token
+
+**Шаги:**
+
+**Backend (5-6 часов):**
+1. Создать `RefreshToken` Entity:
+   - `id`, `user_id`, `token`, `expires_at`
+   - Связь с User (ManyToOne)
+2. Создать Migration:
+   - Таблица `refresh_tokens`
+   - Index на `token` и `user_id`
+3. Создать `RefreshTokenRepository`:
+   - `findByToken()`, `create()`, `deleteByToken()`, `deleteExpired()`
+4. Создать `RefreshTokenService`:
+   - `generateRefreshToken(User): RefreshToken`
+   - `validateRefreshToken(string): User|null`
+   - `rotateRefreshToken(string): RefreshToken`
+5. Обновить `POST /api/auth/login`:
+   - Генерировать refresh token
+   - Установить в отдельный HttpOnly cookie
+   - Access token: 15 минут TTL
+6. Создать `POST /api/auth/refresh`:
+   - Принимать refresh token из cookie
+   - Валидировать и rotate token
+   - Вернуть новый access token + новый refresh token
+7. Создать scheduled command:
+   - `app:cleanup:expired-refresh-tokens`
+   - Удаление истёкших токенов (cron job)
+
+**Frontend (3-4 часа):**
+1. Создать `TokenRefreshManager` class:
+   - Schedule refresh за 1 минуту до истечения
+   - Автоматический вызов `api.refreshToken()`
+   - Handle refresh failures (logout)
+2. Обновить `AuthContext`:
+   - Инициализация `TokenRefreshManager` при login
+   - Очистка scheduler при logout
+3. Создать `api.refreshToken()` метод:
+   - `POST /api/auth/refresh`
+   - Обработка 401 (logout)
+4. Добавить interceptor для 401 responses:
+   - Try refresh token
+   - Retry original request
+   - If refresh fails → logout
+
+**Testing (1 час):**
+- Unit tests: `RefreshTokenService`
+- Integration tests: `/auth/refresh` endpoint
+- E2E test: Login → wait 14 min → auto-refresh → API works
+- Manual: Token rotation работает
+
+**Критерии приёмки:**
+- ✅ Access token: 15 минут TTL
+- ✅ Refresh token: 7 дней TTL
+- ✅ Автообновление за 1 минуту до истечения
+- ✅ Token rotation работает
+- ✅ Expired tokens удаляются (cron)
+- ✅ Tests проходят
+
+---
+
+### Phase 4: CSRF Protection (6-8 часов, Level 2)
+
+**Цель:** Защита от CSRF атак при использовании cookies
+
+**Шаги:**
+
+**Backend (3-4 часа):**
+1. Создать `CsrfTokenService`:
+   - `generateToken(): string` (random 32 bytes)
+   - `validateToken(string, string): bool` (hash_equals)
+   - Store в Symfony Session
+2. Создать `GET /api/csrf-token` endpoint:
+   - Требует authentication
+   - Вернуть CSRF token
+3. Создать `CsrfEventSubscriber`:
+   - Subscribe на kernel.request
+   - Проверять `X-CSRF-Token` header для POST/PATCH/DELETE
+   - Return 403 Forbidden если token invalid
+4. Обновить Security config:
+   - Whitelist для GET requests (no CSRF check)
+
+**Frontend (2-3 часа):**
+1. Создать `CsrfTokenManager` class:
+   - `fetchToken()` при инициализации
+   - `getToken(): string | null`
+   - Auto-refresh при 403 ошибке
+2. Обновить `api.ts`:
+   - Добавить `X-CSRF-Token` header для POST/PATCH/DELETE
+   - Получать token из `CsrfTokenManager`
+3. Обновить `AuthContext`:
+   - Инициализация CSRF token после login
+   - Очистка token при logout
+
+**Testing (1-2 часа):**
+- Unit tests: `CsrfTokenService`
+- Integration tests: CSRF validation
+- E2E test: Мутирующие запросы с/без CSRF token
+- Manual: 403 Forbidden без token
+
+**Критерии приёмки:**
+- ✅ GET /api/csrf-token возвращает token
+- ✅ POST/PATCH/DELETE требуют X-CSRF-Token header
+- ✅ 403 Forbidden если token отсутствует/невалиден
+- ✅ GET requests не требуют CSRF token
+- ✅ Tests проходят
+
+---
+
+## ⚠️ DEPENDENCIES & RISKS
+
+### Технические зависимости
+
+**Phase 1:**
+- ✅ Nginx config writable
+- ✅ Docker compose restart доступен
+
+**Phase 2:**
+- ✅ lexik/jwt-authentication-bundle установлен
+- ✅ nelmio/cors-bundle установлен
+- ⚠️ CORS для credentials может требовать настройки domain
+
+**Phase 3:**
+- ✅ Doctrine ORM настроен
+- ✅ Database migrations работают
+- ⚠️ Cron job для cleanup expired tokens (infrastructure)
+
+**Phase 4:**
+- ✅ Symfony Session настроен
+- ✅ Event subscribers работают
+
+### Риски и митигации
+
+| Риск | Вероятность | Impact | Митигация |
+|------|-------------|--------|-----------|
+| CORS issues с cookies | Средняя | Высокий | Тщательное тестирование CORS config, fallback на Authorization header |
+| CSP breaking inline styles | Низкая | Средний | Incremental CSP deployment, use nonce для inline scripts |
+| Refresh token storage issues | Низкая | Средний | Database constraints, scheduled cleanup job |
+| CSRF token race conditions | Низкая | Низкий | Token reuse allowed, short-lived sessions |
+| Breaking existing clients | Низкая | Высокий | Phased rollout, version negotiation, backward compatibility |
+
+### Breaking changes
+
+**Phase 1:** ❌ НЕТ (только headers)  
+**Phase 2:** ⚠️ ДА - требуется обновление клиентов (но возможен fallback)  
+**Phase 3:** ❌ НЕТ (прозрачное для клиента)  
+**Phase 4:** ❌ НЕТ (только для мутирующих запросов)
+
+---
+
+## 🎨 CREATIVE PHASES REQUIRED
+
+**NONE** - Это техническая security task без UI/UX или архитектурных решений, требующих creative exploration.
+
+Все решения основаны на:
+- Industry best practices (OWASP)
+- Symfony/lexik_jwt documentation
+- RFC 6265 (HTTP Cookies)
+- CSRF protection patterns
+
+---
+
+## 🧪 TESTING STRATEGY
+
+### Unit Tests
+
+**Phase 2:**
+- `AuthControllerTest::testLoginSetsCookie()`
+- `AuthControllerTest::testGetCurrentUserReturnsUserData()`
+
+**Phase 3:**
+- `RefreshTokenServiceTest::testGenerateRefreshToken()`
+- `RefreshTokenServiceTest::testValidateRefreshToken()`
+- `RefreshTokenServiceTest::testRotateRefreshToken()`
+
+**Phase 4:**
+- `CsrfTokenServiceTest::testGenerateToken()`
+- `CsrfTokenServiceTest::testValidateToken()`
+
+### Integration Tests
+
+**Phase 2:**
+- Cookie auth flow (login → request with cookie → success)
+- CORS credentials (OPTIONS preflight)
+
+**Phase 3:**
+- Refresh token flow (login → wait → auto-refresh → success)
+- Token rotation (refresh → old token invalid)
+
+**Phase 4:**
+- CSRF validation (POST without token → 403)
+- CSRF validation (POST with valid token → success)
+
+### Manual Testing
+
+**Phase 1:**
+- `curl -I http://cityquest.test | grep X-Frame-Options`
+- Browser DevTools → Headers check
+
+**Phase 2:**
+- Login → DevTools → Application → Cookies → jwt_token present
+- `localStorage.getItem('jwt_token')` → null
+- API requests work without Authorization header
+
+**Phase 3:**
+- Login → wait 14 minutes → observe auto-refresh in Network tab
+- Old refresh token fails after rotation
+
+**Phase 4:**
+- POST without X-CSRF-Token → 403 Forbidden
+- POST with token → 200 OK
+
+---
+
+## 📊 METRICS & SUCCESS CRITERIA
+
+### Security Metrics
+
+**Before:**
+- 🔴 XSS Risk: Critical
+- 🟠 CSRF Risk: High
+- 🟡 Clickjacking Risk: Medium
 - ⚠️ Security Headers: 0/6
+- ⚠️ Token Exposure: localStorage (XSS vulnerable)
 
-**После улучшений:**
-- ✅ XSS Risk: Минимальный (HttpOnly cookies)
-- ✅ CSRF Risk: Минимальный (CSRF tokens)
-- ✅ Clickjacking Risk: Минимальный (X-Frame-Options)
-- ✅ Security Headers: 6/6
+**After Phase 1:**
+- 🟢 Security Headers: 6/6
+- 🟡 XSS Risk: Medium (headers help but localStorage still used)
+- 🟡 Clickjacking Risk: Low (X-Frame-Options)
 
-#### Риски и ограничения
-- Миграция на cookies требует изменений на backend и frontend
-- Возможны проблемы с CORS при работе с cookies
-- Refresh token добавляет сложность в клиентский код
-- CSP может сломать инлайн стили/скрипты (нужна адаптация)
+**After Phase 2:**
+- 🟢 XSS Risk: Low (HttpOnly cookies)
+- 🟢 Token Exposure: HttpOnly (XSS safe)
+- 🟡 Token Lifetime: 1 hour (still risky)
 
-#### Зависимости
-- Symfony lexik/jwt-authentication-bundle (уже установлен)
-- Настройка CORS для credentials (nelmio/cors-bundle)
+**After Phase 3:**
+- 🟢 Token Lifetime: 15 minutes (minimal exposure window)
+- 🟢 Refresh Token: Rotation (replay attack protection)
 
-#### Следующие шаги после завершения
-- Security audit всего приложения
-- Документация best practices
-- Обучение команды security guidelines
+**After Phase 4:**
+- 🟢 CSRF Risk: Low (CSRF tokens)
+- 🟢 Overall Security Score: A+
+
+### Performance Metrics
+
+- Cookie overhead: +50-100 bytes per request (acceptable)
+- Refresh token check: <10ms database query
+- CSRF validation: <5ms hash comparison
+- Total overhead: <20ms per request
+
+### Code Quality Metrics
+
+- Test coverage: 85%+ maintained
+- PHPStan: Level 5, 0 errors
+- No console errors in browser
+- Zero security warnings from OWASP ZAP
+
+---
+
+## 📚 DOCUMENTATION PLAN
+
+### Memory Bank Updates
+
+- ✅ `tasks.md` - comprehensive plan (этот документ)
+- ⏳ `activeContext.md` - update при начале каждой фазы
+- ⏳ `progress.md` - update после завершения каждой фазы
+- ⏳ `auth-reference.md` - update после Phase 2 (cookie auth)
+- ⏳ `techContext.md` - добавить security infrastructure section
+- ⏳ `security-audit-2025-12-06.md` - update статус уязвимостей
+
+### Code Documentation
+
+- Inline comments для security-critical code
+- PHPDoc для всех public methods
+- JSDoc для frontend services
+
+### User Documentation
+
+- Postman collection update (Phase 2)
+- README security section (все фазы)
+- Deployment guide для production (HTTPS, CSP)
+
+---
+
+## ✅ PLAN VERIFICATION CHECKLIST
+
+- ✅ Requirements clearly documented? **YES**
+- ✅ Technology stack validated? **YES** (Symfony, React, Nginx, все установлено)
+- ✅ Affected components identified? **YES** (10+ файлов)
+- ✅ Implementation steps detailed? **YES** (4 фазы с подробными шагами)
+- ✅ Dependencies documented? **YES** (CORS, JWT bundle, Doctrine)
+- ✅ Challenges & mitigations addressed? **YES** (таблица рисков)
+- ✅ Creative phases identified? **N/A** (техническая задача, creative не требуется)
+- ✅ tasks.md updated with plan? **IN PROGRESS** (этот документ)
+
+---
+
+## 🚀 NEXT STEPS
+
+**Рекомендация:** Начать с **Phase 1** (Security Headers)
+
+**Обоснование:**
+- ⚡ Быстрая реализация (30 минут)
+- ✅ Минимальный риск (только headers)
+- 🔴 Критичная защита от XSS, Clickjacking
+- ✅ Не блокирует другие задачи
+- ✅ Независима от других фаз
+
+**После Phase 1:**
+→ Proceed to `/build` command для Phase 1 implementation
+
+**После завершения всех фаз:**
+→ `/reflect` command для рефлексии
+→ `/archive` command для архивации задачи CQST-008
+
+---
+
+**План создан:** 2025-12-24  
+**Complexity Level:** 3 (Intermediate Feature)  
+**Estimated Total Time:** 19-25 часов (все 4 фазы)  
+**Phase 1 Time:** 30 минут ⚡  
+**Status:** ✅ PLAN COMPLETE → Ready for BUILD Mode
 
 ---
 
@@ -853,6 +1384,6 @@ const handleStartQuest = async () => {
 
 ---
 
-**Последнее обновление:** 2025-12-06  
-**Текущий этап:** CQST-007 ЗАВЕРШЕН → CQST-008 Phase 1 (КРИТИЧНО)  
-**Следующий шаг:** 🔴 CQST-008 Phase 1 (Security Headers) - 30 минут, критично
+**Последнее обновление:** 2025-12-24  
+**Текущий этап:** CQST-008 ЗААРХИВИРОВАНО ✅  
+**Следующий шаг:** 🎯 `/van` для начала новой задачи

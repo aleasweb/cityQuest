@@ -3,3 +3,8 @@
 /.fleet
 .DS_Store
 /vendor
+
+# Frontend build artifacts
+/frontend/web/dist/
+/project/frontend/dist/
+/frontend/web/node_modules/

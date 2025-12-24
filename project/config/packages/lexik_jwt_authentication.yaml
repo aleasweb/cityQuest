@@ -3,3 +3,24 @@ lexik_jwt_authentication:
     public_key: '%env(resolve:JWT_PUBLIC_KEY)%'
     pass_phrase: '%env(JWT_PASSPHRASE)%'
     user_id_claim: username
+    
+    # Token extraction from cookies (Phase 2: HttpOnly Cookies)
+    token_extractors:
+        authorization_header:
+            enabled: true
+            prefix: Bearer
+            name: Authorization
+        cookie:
+            enabled: true
+            name: jwt_token
+    
+    # Set JWT in HttpOnly cookie (Phase 2: Security Enhancement)
+    set_cookies:
+        jwt_token:
+            lifetime: 3600          # 1 hour (will be reduced to 15 min in Phase 3)
+            samesite: strict        # CSRF protection
+            path: /
+            domain: ~               # null = current domain
+            secure: false           # true for production with HTTPS
+            httpOnly: true          # CRITICAL: prevents JavaScript access (note: camelCase)
+            split: ~

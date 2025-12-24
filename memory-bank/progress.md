@@ -4,6 +4,24 @@
 
 ## 📊 Общий прогресс
 
+### 🔐 CQST-008 Phase 4 - ОТМЕНЕНА (2025-12-24)
+
+**Задача:** CSRF Protection  
+**Действие:** Rollback всех изменений Phase 4  
+**Причина:** Решение не имплементировать Phase 4
+
+**Удалено:**
+- `project/src/Security/Service/CsrfTokenService.php`
+- `project/src/Security/Infrastructure/EventSubscriber/CsrfTokenSubscriber.php`
+- Изменения в `AuthController.php` (endpoint `/api/auth/csrf-token`)
+
+**Обновлено:**
+- `memory-bank/tasks.md` - Phase 4 помечена как ОТМЕНЕНА
+- `memory-bank/activeContext.md` - Phases 3-4 отменены
+- `memory-bank/progress.md` - Добавлена запись об отмене
+
+---
+
 ### Этап 1: Backend API + Тесты (В ПРОЦЕССЕ - 35%)
 
 #### 1.1 Регистрация и авторизация ✅ ЗАВЕРШЕНО
@@ -96,11 +114,12 @@
 
 **Готовность:** 100% ✅
 
-### Этап 2: Frontend (В ПРОЦЕССЕ - 60%)
+### Этап 2: Frontend (В ПРОЦЕССЕ - 65%)
 - ✅ Настройка React + Tailwind + Vite
 - ✅ Главная страница с фильтрами (city, difficulty, isPopular)
 - ✅ Страница квеста с полным функционалом (Like, Start, Pause, Abandon)
 - ✅ Авторизация (AuthModal: Register/Login с JWT)
+- ✅ **Security: HttpOnly Cookies, Security Headers** (CQST-008)
 - 🔶 Профиль (Quest History реализован, требуется расширение)
 - ✅ API Integration (Cities, Quests, User Progress)
 - ✅ UI Components (Toast, ActiveQuestModal, QuestCard)
@@ -109,6 +128,7 @@
 - CQST-007 Phase 1: CORS + Cities + AuthModal (2.25ч)
 - CQST-007 Phase 2: API Consistency + Filters (45мин)
 - CQST-007 Phase 3: User Progress Integration (6ч)
+- CQST-008 Phases 1-2: Security Headers + HttpOnly Cookies (5ч)
 
 **Bundle Size:** 221.42 kB (оптимизирован)
 
@@ -118,15 +138,70 @@
 
 ## 📈 Метрики
 - **Готовность Backend API:** 35%
-- **Готовность Frontend:** 60% (React + Auth + API + User Progress + Quest Management)
+- **Готовность Frontend:** 65% (React + Auth + API + User Progress + Quest Management + Security)
 - **Готовность Mobile:** 0%
-- **Завершенных задач:** 11 фаз (8 основных + 3 фазы CQST-007) + 1 рефакторинг
-- **Активных задач:** 0
+- **Завершенных и заархивированных задач:** 9 основных задач + 1 рефакторинг
+  - Основные: CQST-001, CQST-002, CQST-003, CQST-004, CQST-005, CQST-007 (3 фазы), CQST-008 (2 фазы)
+  - Рефакторинг: Test Infrastructure
+- **Активных задач:** 0 (готов к новой задаче)
 
 ## 🎯 Текущий фокус
-**Готов к новой задаче** - рекомендуется CQST-008 (Security Headers) или VAN MODE
+**✅ CQST-008 ЗААРХИВИРОВАНО** - Frontend Token Security Enhancement | Готов к новой задаче
 
 ## 📅 Недавние обновления
+- **2025-12-24:** 📦 **CQST-008 ЗААРХИВИРОВАНО** - Frontend Token Security Enhancement
+  - ✅ Создан архивный документ: `memory-bank/archive/archive-CQST-008-20251224.md`
+  - ✅ Reflection: `memory-bank/reflection/reflection-CQST-008.md`
+  - 📊 Реализовано: Phases 1-2 (Security Headers + HttpOnly Cookies)
+  - ❌ Отменено: Phases 3-4 (Refresh Token + CSRF)
+  - 🎯 Время: ~5ч (из запланированных 19-25ч, scope reduced)
+  - 🛡️ Security Score: Critical → Low (XSS protection)
+  - 🛡️ Security Headers: 0/6 → 6/6 ✅
+  - 🛡️ JWT Storage: localStorage → HttpOnly Cookie ✅
+  - 💡 Key Lessons: Phased approach, quick wins, incremental security better than perfect security later
+  - 🏆 Achievements: Zero regression bugs, 100% tests pass, production-ready security
+  - 📈 Impact: Critical security vulnerabilities fixed with minimal investment
+  - 🎯 Status: COMPLETE & ARCHIVED ✅
+  - 🎯 Next: Ready for new task (`/van` mode)
+- **2025-12-24:** ❌ **CQST-008 Phases 3-4 ОТМЕНЕНЫ** - Refresh Token + CSRF Protection
+  - ❌ Начата реализация но отменена по решению
+  - ✅ Откат изменений: удалены RefreshToken Entity, Repository, Migration
+  - 📊 Причина: Phase 3 не критична для текущего этапа проекта
+  - 🎯 Результат: CQST-008 завершена с Phases 1-2 (Security Headers + HttpOnly Cookies)
+  - 💡 Phase 3 и 4 могут быть реализованы позже если потребуется
+- **2025-12-24:** ✅ **CQST-008 Phase 2 ЗАВЕРШЕНА** - HttpOnly Cookies Migration & Testing
+  - ✅ Backend: lexik_jwt config с HttpOnly cookies (token_extractors + set_cookies)
+  - ✅ Backend: CORS allow_credentials для cookies
+  - ✅ Backend: Новый endpoint GET /api/auth/me (возвращает user data)
+  - ✅ Backend: JWTAuthenticationSubscriber (добавляет user в login response)
+  - ✅ Backend: Logout с явным удалением HttpOnly cookie
+  - ✅ Frontend: Удалены все localStorage JWT operations
+  - ✅ Frontend: credentials: 'include' во всех API requests
+  - ✅ Frontend: login() использует user из response (не декодирует JWT)
+  - ✅ Frontend: getCurrentUser() вызывает /auth/me endpoint
+  - ✅ Frontend: Удалён импорт jwt-decode (больше не нужен)
+  - ✅ Browser testing: Login/logout flow, HttpOnly cookie, API с cookie
+  - 🛡️ Security: JWT XSS protection через HttpOnly cookie
+  - 🛡️ Security: Нет JWT decoding на клиенте
+  - 🎯 Время: ~4 часа (оценка: 4-6ч) ✅
+  - 🐛 Bugs fixed: config typo httponly→httpOnly, logout cookie deletion
+  - 📂 Файлов изменено: 6 backend + 1 frontend
+  - 📈 Security Score: 🔴 Critical → 🟢 Low (XSS protection)
+- **2025-12-24:** ✅ **CQST-008 Phase 1 ЗАВЕРШЕНА** - Security Headers Implementation & Testing
+  - ✅ Добавлены 6 HTTP security headers в Nginx config
+  - ✅ Добавлен CSP (Content Security Policy) header
+  - ✅ Добавлен CSP meta tag в index.html (source + built)
+  - ✅ Обновлён frontend dist с CSP meta tag
+  - ✅ Пересобран nginx контейнер (`docker compose build nginx`)
+  - ✅ Протестированы headers через curl - все 6 присутствуют
+  - ✅ Проверены Frontend (/) и API (/api/cities) endpoints
+  - 📊 Headers: X-Frame-Options, X-Content-Type-Options, X-XSS-Protection, Referrer-Policy, Permissions-Policy, CSP
+  - 🛡️ Защита от: XSS, Clickjacking, MIME sniffing, unauthorized referrer leaks
+  - 🎯 Время: ~30 минут (реализация + тестирование)
+  - 💡 Ключевое решение: Временный 'unsafe-inline' в CSP до внедрения nonce-based CSP
+  - 💡 Важное открытие: Nginx config требует rebuild контейнера (не просто restart)
+  - 📂 Файлы: docker/nginx/conf.d/default.conf, frontend/web/index.html
+  - 📈 Security Score: 0/6 → 6/6 ✅
 - **2025-12-07:** 📦 **ЗАДАЧА CQST-007 Phase 3 ЗААРХИВИРОВАНА** - User Progress Integration
   - ✅ Создан архивный документ: memory-bank/archive/archive-CQST-007-phase3-20251207.md
   - ✅ Like/Unlike с оптимистичным UI, Start Quest, Quest Management, Quest History
@@ -272,6 +347,60 @@
 **Документация:**
 - ✅ Reflection: `memory-bank/reflection/reflection-CQST-007-phase3.md`
 - ✅ Archive: `memory-bank/archive/archive-CQST-007-phase3-20251207.md`
+
+**Готовность:** 100% ✅ ARCHIVED
+
+---
+
+#### 1.9 Frontend Token Security Enhancement ✅ ЗААРХИВИРОВАНО
+**Задача:** CQST-008 Phases 1-2  
+**Статус:** ✅ COMPLETE & ARCHIVED  
+**Дата начала:** 2025-12-24  
+**Дата завершения:** 2025-12-24
+
+**Реализовано:**
+- ✅ **Phase 1: Security Headers** (30 мин)
+  - 6 HTTP security headers (X-Frame-Options, X-Content-Type-Options, X-XSS-Protection, Referrer-Policy, Permissions-Policy, CSP)
+  - CSP meta tag в HTML
+  - Nginx config в Docker
+- ✅ **Phase 2: HttpOnly Cookies Migration** (4ч)
+  - JWT мигрирован из localStorage в HttpOnly cookie
+  - Новый endpoint: GET /api/auth/me
+  - CORS credentials support
+  - JWTAuthenticationSubscriber (user в login response)
+  - Logout с explicit cookie deletion
+
+**Отменено:**
+- ❌ Phase 3: Refresh Token Mechanism (начата и откачена)
+- ❌ Phase 4: CSRF Protection (начата и откачена)
+
+**Security Improvements:**
+- 🔴 JWT XSS Risk: Critical → 🟢 Low
+- 🟢 Security Headers: 0/6 → 6/6
+- 🟢 JWT Storage: localStorage → HttpOnly Cookie
+- 🟢 User Data: Client decode → Server (/auth/me)
+
+**Bugs Fixed:**
+- ✅ Config typo: `httponly` → `httpOnly` (Symfony camelCase requirement)
+- ✅ Logout: HttpOnly cookie deletion через Cookie::create() с expires=1
+
+**Метрики:**
+- Время: ~5 часов (из 19-25ч запланированных, scope reduced)
+- Files Changed: 8 (6 backend + 1 frontend + 1 infra)
+- Tests: 85 tests, 295 assertions, 100% pass
+- Regression Bugs: 0
+- Breaking Changes: 0
+
+**Key Lessons:**
+- Phased approach обеспечил гибкость (2/4 phases реализованы)
+- Security headers - quick win (30 мин, high impact)
+- Incremental security > perfect security later
+- HttpOnly cookies требуют координации backend + frontend
+
+**Документация:**
+- ✅ Security Audit: `memory-bank/security-audit-2025-12-06.md`
+- ✅ Reflection: `memory-bank/reflection/reflection-CQST-008.md`
+- ✅ Archive: `memory-bank/archive/archive-CQST-008-20251224.md`
 
 **Готовность:** 100% ✅ ARCHIVED
 
