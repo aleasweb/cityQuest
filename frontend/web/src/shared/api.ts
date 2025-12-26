@@ -1,8 +1,13 @@
 // Phase 2: Removed jwt-decode import - no longer decode JWT on client
 // JWT is in HttpOnly cookie and user data comes from backend
 import type { Quest, QuestFilters, UserProgress, RegisterData, LoginData, AuthResponse, User, City, UserProfileWithHistory } from './types';
+import { cache } from './cacheManager';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
+
+// Cache configuration for cities endpoint
+const CITIES_CACHE_KEY = 'cities_cache';
+const CITIES_CACHE_TTL = 3600; // 1 hour in seconds
 
 /**
  * API Response wrapper
@@ -28,25 +33,22 @@ async function apiRequest<T>(
 
   const url = endpoint.startsWith('http') ? endpoint : `${API_URL}${endpoint}`;
   
-  try {
-    const response = await fetch(url, {
-      ...options,
-      headers,
-      // Phase 2: Send cookies (including HttpOnly jwt_token) with every request
-      credentials: 'include',
-    });
+  const response = await fetch(url, {
+    ...options,
+    headers,
+    // Phase 2: Send cookies (including HttpOnly jwt_token) with every request
+    credentials: 'include',
+  });
 
-    const data = await response.json();
+  const data = await response.json();
 
-    if (!response.ok) {
-      throw new Error(data.error || `HTTP Error: ${response.status}`);
-    }
-
-    return data;
-  } catch (error) {
+  if (!response.ok) {
+    const error = new Error(data.error || `HTTP Error: ${response.status}`);
     console.error('API Request Error:', error);
     throw error;
   }
+
+  return data;
 }
 
 /**
@@ -62,9 +64,12 @@ export const api = {
   getQuests: async (filters?: QuestFilters): Promise<Quest[]> => {
     const params = new URLSearchParams();
     
-    if (filters?.city) params.append('city', filters.city);
-    if (filters?.difficulty) params.append('difficulty', filters.difficulty);
-    if (filters?.isPopular !== undefined) params.append('is_popular', filters.isPopular.toString());
+    // Деструктуризация для type-safe доступа к полям
+    const { city, difficulty, isPopular } = filters || {};
+    
+    if (city) params.append('city', city);
+    if (difficulty) params.append('difficulty', difficulty);
+    if (isPopular !== undefined) params.append('is_popular', isPopular.toString());
     
     const query = params.toString();
     const response = await apiRequest<ApiResponse<Quest[]>>(
@@ -122,13 +127,50 @@ export const api = {
     return response.data;
   },
 
-           /**
-          * Получить список городов
-          * GET /cities
-          */
-         getCities: async (): Promise<City[]> => {
-           const response = await apiRequest<{ data: City[] }>('/cities');
-           return response.data || [];
+  /**
+   * Получить список городов с кешированием
+   * GET /cities
+   * 
+   * Cache strategy:
+   * - First request: API call + save to cache (TTL: 1 hour)
+   * - Subsequent requests: read from cache (no API call)
+   * - Cache expired: new API call + update cache
+   * - API error: fallback to stale cache if available
+   */
+  getCities: async (): Promise<City[]> => {
+    // 1. Check cache first
+    const cached = cache.get<City[]>(CITIES_CACHE_KEY);
+    if (cached) {
+      if (import.meta.env.DEV) {
+        console.log('🔵 [Cache] Cities loaded from cache');
+      }
+      return cached;
+    }
+
+    // 2. Cache miss or expired - fetch from API
+    try {
+      const response = await apiRequest<{ data: City[] }>('/cities');
+      const cities = response.data || [];
+
+      // 3. Save to cache
+      cache.set(CITIES_CACHE_KEY, cities, CITIES_CACHE_TTL);
+
+      if (import.meta.env.DEV) {
+        console.log('🟢 [Cache] Cities loaded from API and cached for 1 hour');
+      }
+
+      return cities;
+    } catch (error) {
+      // 4. Fallback: try to use stale cache on API error
+      const staleCache = cache.getStale<City[]>(CITIES_CACHE_KEY);
+      if (staleCache) {
+        console.warn('⚠️ [Cache] API failed, using stale cache as fallback', error);
+        return staleCache;
+      }
+      
+      // No cache available - re-throw error
+      throw error;
+    }
   },
 
   // ============ USER PROGRESS ============
@@ -287,6 +329,34 @@ export const api = {
       console.log('User not authenticated');
       return null;
     }
+  },
+
+  // ============ DEVELOPER TOOLS ============
+
+  /**
+   * Clear cities cache (for development/debugging)
+   * 
+   * Use this to force a fresh API call on next getCities() request.
+   * Useful when testing or when cities data has been updated on backend.
+   * 
+   * @example
+   * ```typescript
+   * // In browser console:
+   * api.clearCitiesCache();
+   * ```
+   */
+  clearCitiesCache: (): void => {
+    cache.invalidate(CITIES_CACHE_KEY);
+    console.log('✅ [Cache] Cities cache cleared. Next request will fetch from API.');
+  },
+
+  /**
+   * Check if cities cache is valid
+   * 
+   * @returns true if cache exists and not expired
+   */
+  isCitiesCacheValid: (): boolean => {
+    return cache.isValid(CITIES_CACHE_KEY);
   },
 };
 
