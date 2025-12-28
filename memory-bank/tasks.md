@@ -3,13 +3,1163 @@
 > **Источник истины для всех активных задач**
 
 ## 📊 Текущий статус
-- **Статус:** 🎯 Готов к новой задаче (CQST-009 заархивирована)
-- **Активных задач:** 0
+- **Статус:** 🚀 CQST-010 PLAN COMPLETE → Готов к BUILD Mode
+- **Активных задач:** 1 (CQST-010 - готова к /build)
 - **Завершенных задач:** 9 + 1 рефакторинг
 
 ## 📋 Активные задачи
 
-_Нет активных задач. Готов к `/van` для начала новой задачи._
+### Задача #010: DDD Refactoring - UserProgress Domain Events & Event Sourcing
+
+**ID задачи:** CQST-010  
+**Дата создания:** 2025-12-26  
+**Дата утверждения структуры:** 2025-12-26  
+**Дата завершения планирования:** 2025-12-26  
+**Статус:** 🚀 PLAN COMPLETE → Ready for `/build` Mode  
+**Тип:** Level 3-4 - Intermediate to Complex Feature  
+**Приоритет:** 🟡 СРЕДНИЙ (Архитектурное улучшение)  
+**Estimated Time:** 9-12 часов (4 фазы)
+
+#### Описание
+
+Рефакторинг домена UserProgress для полного соответствия DDD принципам с использованием Domain Events и паттерна Event Store.
+
+**Цели:**
+1. ✅ Создать Shared Event Sourcing инфраструктуру (DomainEventInterface, RecordsEvents trait)
+2. ✅ Создать 6 доменных событий для UserQuestProgress с наследованием от AbstractUserQuestProgressEvent
+3. ✅ Изменять состояние агрегата внутри агрегата при возникновении событий
+4. ✅ Создать таблицу `domain_events_progress` для хранения всех событий (Event Store)
+5. ✅ Реализовать механизм синхронной записи событий в БД при изменении агрегата
+6. ✅ Добавить отслеживание платформы клиента (web/ios/android) в каждое событие
+
+**Scope:**
+- **Shared Infrastructure** (`src/Shared/Domain/Event/`):
+  - `DomainEventInterface` - базовый интерфейс
+  - `RecordsEvents` trait - механизм накопления событий для агрегатов
+- **UserProgress Events** (`src/UserProgress/Domain/Event/`):
+  - `AbstractUserQuestProgressEvent` - базовый класс (implements DomainEventInterface)
+  - 6 конкретных событий: QuestStarted, QuestResumed, QuestPaused, QuestCompleted, QuestAbandoned, QuestStepCheck
+- **Event Store:**
+  - Таблица `domain_events_progress` БЕЗ id (PK) и occurred_at полей
+  - Только 7 полей: aggregate_id, user_id, quest_id, event_type, event_data (JSONB), platform (JSONB), recorded_at
+  - 5 индексов: aggregate, user, quest, type, recorded_at
+  - `ProgressEventStoreInterface` + Repository
+- **Aggregate Updates:**
+  - UserQuestProgress использует RecordsEvents trait
+  - Все методы принимают параметр `array $platform`
+  - Генерация событий при изменении состояния
+- **Service Updates:**
+  - UserProgressService синхронно сохраняет события в Event Store
+
+#### 🎯 ТЕКУЩИЙ ЭТАП: Детальное планирование завершено
+
+**Статус:** ✅ PLAN COMPLETE → Ready for BUILD Mode
+
+Детальный план реализации создан с breakdown по фазам и компонентам.
+
+---
+
+## 🎯 ДЕТАЛЬНЫЙ ПЛАН РЕАЛИЗАЦИИ
+
+### Complexity Level: 3-4 (Intermediate to Complex Feature)
+### Total Estimated Time: 9-12 часов
+### Implementation Approach: Phased (4 фазы)
+
+---
+
+### ФАЗА 1: Shared Event Sourcing Infrastructure (2-3 часа)
+
+**Цель:** Создать переиспользуемую инфраструктуру для Event Sourcing
+
+**1.1. Создать DomainEventInterface (30 минут)**
+- **Файл:** `project/src/Shared/Domain/Event/DomainEventInterface.php`
+- **Зависимости:** Нет
+- **Действия:**
+  - Создать интерфейс с 5 методами
+  - Добавить PHPDoc комментарии
+  - Импортировать Symfony\Component\Uid\Uuid
+
+**1.2. Создать RecordsEvents trait (30 минут)**
+- **Файл:** `project/src/Shared/Domain/Event/RecordsEvents.php`
+- **Зависимости:** DomainEventInterface
+- **Действия:**
+  - Создать trait с 3 методами: apply(), pull(), recordedEvents[]
+  - Добавить PHPDoc для type hints
+  - Защищённый метод apply() для использования в агрегатах
+
+**1.3. Unit тесты для RecordsEvents (45 минут)**
+- **Файл:** `project/tests/Shared/Domain/Event/RecordsEventsTest.php`
+- **Зависимости:** RecordsEvents trait, Mock DomainEventInterface
+- **Тесты:**
+  - testRecordEventAddsEventToCollection()
+  - testPullDomainEventsReturnsEventsAndClearsCollection()
+  - testPullDomainEventsReturnsEmptyArrayWhenNoEvents()
+  - testMultipleEventsCanBeRecorded()
+
+**1.4. Документация Shared инфраструктуры (15 минут)**
+- **Файл:** `project/src/Shared/Domain/Event/README.md`
+- **Содержание:**
+  - Описание паттерна Event Sourcing
+  - Примеры использования интерфейса и trait
+  - Best practices
+
+**Критерии приёмки Фазы 1:**
+- ✅ DomainEventInterface создан с корректными type hints
+- ✅ RecordsEvents trait функционален и протестирован
+- ✅ 4 unit теста проходят
+- ✅ PHPStan Level 5 без ошибок
+- ✅ Документация создана
+
+---
+
+### ФАЗА 2: UserProgress Domain Events (3-4 часа)
+
+**Цель:** Создать 7 классов событий (1 абстрактный + 6 конкретных)
+
+**2.1. Создать AbstractUserQuestProgressEvent (45 минут)**
+- **Файл:** `project/src/UserProgress/Domain/Event/AbstractUserQuestProgressEvent.php`
+- **Зависимости:** DomainEventInterface, Uuid
+- **Действия:**
+  - Реализовать все методы DomainEventInterface
+  - Добавить protected свойства: aggregateId, userId, questId, occurredAt, platform
+  - Конструктор с 5 параметрами
+  - Абстрактный метод getEventData()
+
+**2.2. Создать 6 конкретных событий (2 часа)**
+
+**2.2.1. QuestStartedEvent (15 минут)**
+- **Файл:** `project/src/UserProgress/Domain/Event/QuestStartedEvent.php`
+- **Действия:** Extends AbstractUserQuestProgressEvent, getEventData() → []
+
+**2.2.2. QuestResumedEvent (15 минут)**
+- **Файл:** `project/src/UserProgress/Domain/Event/QuestResumedEvent.php`
+- **Действия:** Аналогично QuestStartedEvent
+
+**2.2.3. QuestPausedEvent (15 минут)**
+- **Файл:** `project/src/UserProgress/Domain/Event/QuestPausedEvent.php`
+- **Действия:** Аналогично QuestStartedEvent
+
+**2.2.4. QuestCompletedEvent (15 минут)**
+- **Файл:** `project/src/UserProgress/Domain/Event/QuestCompletedEvent.php`
+- **Действия:** Аналогично QuestStartedEvent
+
+**2.2.5. QuestAbandonedEvent (15 минут)**
+- **Файл:** `project/src/UserProgress/Domain/Event/QuestAbandonedEvent.php`
+- **Действия:** Аналогично QuestStartedEvent
+
+**2.2.6. QuestStepCheckEvent (45 минут)**
+- **Файл:** `project/src/UserProgress/Domain/Event/QuestStepCheckEvent.php`
+- **Особенность:** Дополнительные параметры в конструкторе + getEventData() с данными
+- **Поля:** stepId, userLatitude, userLongitude, distanceMeters, checkPassed
+
+**2.3. Unit тесты для событий (1 час)**
+- **Файл:** `project/tests/UserProgress/Domain/Event/UserQuestProgressEventsTest.php`
+- **Тесты:**
+  - testAbstractEventImplementsInterface()
+  - testEventGettersReturnCorrectValues()
+  - testGetEventTypeReturnsFullyQualifiedClassName()
+  - testQuestStepCheckEventReturnsEventData()
+  - testSimpleEventsReturnEmptyEventData()
+
+**Критерии приёмки Фазы 2:**
+- ✅ 7 классов событий созданы
+- ✅ Все события корректно наследуются
+- ✅ QuestStepCheckEvent возвращает корректный event_data
+- ✅ 5 простых событий возвращают пустой массив
+- ✅ Unit тесты проходят
+- ✅ PHPStan Level 5 без ошибок
+
+---
+
+### ФАЗА 3: Event Store & Database (2-3 часа)
+
+**Цель:** Создать персистентность для событий
+
+**3.1. Doctrine миграция (30 минут)**
+- **Файл:** `project/migrations/Version[timestamp].php`
+- **Действия:**
+  - Создать таблицу domain_events_progress (7 колонок)
+  - Создать 5 индексов
+  - JSONB для event_data и platform
+  - Добавить комментарии к таблице
+
+**3.2. Создать ProgressEventStoreInterface (15 минут)**
+- **Файл:** `project/src/UserProgress/Domain/Repository/ProgressEventStoreInterface.php`
+- **Методы:**
+  - append(DomainEventInterface $event): void
+  - findByAggregateId(Uuid $aggregateId): array
+  - findByUserId(Uuid $userId): array
+  - findByQuestId(Uuid $questId): array
+
+**3.3. Doctrine Repository (1 час)**
+- **Файл:** `project/src/UserProgress/Infrastructure/Persistence/DoctrineProgressEventStore.php`
+- **Зависимости:** EntityManagerInterface, ProgressEventStoreInterface
+- **Действия:**
+  - Реализовать append() - INSERT событий в БД
+  - Реализовать find* методы с WHERE clauses
+  - Сериализация platform и event_data в JSON
+  - Обработка ошибок БД
+
+**3.4. Обновить services.yaml (15 минут)**
+- **Файл:** `project/config/services.yaml`
+- **Действия:**
+  - Добавить autowiring для ProgressEventStoreInterface
+  - Bind к DoctrineProgressEventStore
+
+**3.5. Integration тесты Event Store (45 минут)**
+- **Файл:** `project/tests/UserProgress/Infrastructure/Persistence/DoctrineProgressEventStoreTest.php`
+- **Тесты:**
+  - testAppendPersistsEventToDatabase()
+  - testFindByAggregateIdReturnsEvents()
+  - testFindByUserIdReturnsEvents()
+  - testFindByQuestIdReturnsEvents()
+  - testAppendSerializesPlatformAsJson()
+  - testAppendSerializesEventDataAsJson()
+
+**Критерии приёмки Фазы 3:**
+- ✅ Миграция создана и применена
+- ✅ Таблица domain_events_progress существует с корректной структурой
+- ✅ ProgressEventStoreInterface определён
+- ✅ DoctrineProgressEventStore реализован
+- ✅ Integration тесты проходят
+- ✅ События корректно сериализуются в JSONB
+
+---
+
+### ФАЗА 4: Aggregate & Service Updates (2-3 часа)
+
+**Цель:** Интегрировать события в бизнес-логику
+
+**4.1. Обновить UserQuestProgress агрегат (1 час)**
+- **Файл:** `project/src/UserProgress/Domain/Entity/UserQuestProgress.php`
+- **Действия:**
+  - Добавить `use RecordsEvents` trait
+  - Обновить методы: start(), pause(), complete(), recordStepCheck()
+  - Добавить параметр `array $platform` во все методы
+  - Генерировать соответствующие события через apply()
+  - **НЕ генерировать** события в like()/unlike()
+
+**4.2. Обновить UserProgressService (45 минут)**
+- **Файл:** `project/src/UserProgress/Application/Service/UserProgressService.php`
+- **Зависимости:** Добавить ProgressEventStoreInterface
+- **Действия:**
+  - Добавить `array $platform` параметр во все public методы
+  - Создать private метод persistEvents(UserQuestProgress)
+  - Вызывать persistEvents() после save() агрегата
+  - Обновить abandonQuest() для генерации события вручную
+
+**4.3. Обновить UserProgressController (30 минут)**
+- **Файл:** `project/src/UserProgress/Presentation/Controller/UserProgressController.php`
+- **Действия:**
+  - Добавить метод extractPlatform(Request): array
+  - Парсить User-Agent, определять тип клиента (web/ios/android)
+  - Передавать platform во все вызовы сервиса
+
+**4.4. Unit тесты для агрегата (45 минут)**
+- **Файл:** `project/tests/UserProgress/Domain/Entity/UserQuestProgressTest.php`
+- **Обновить существующие тесты:**
+  - testStartGeneratesQuestStartedEvent()
+  - testPauseGeneratesQuestPausedEvent()
+  - testCompleteGeneratesQuestCompletedEvent()
+  - testRecordStepCheckGeneratesEvent()
+  - testLikeDoesNotGenerateEvent()
+  - testPullDomainEventsClearsEvents()
+
+**4.5. Integration тесты для сервиса (45 минут)**
+- **Файл:** `project/tests/UserProgress/Application/Service/UserProgressServiceTest.php`
+- **Новые тесты:**
+  - testStartQuestPersistsEvent()
+  - testPauseQuestPersistsEvent()
+  - testCompleteQuestPersistsEvent()
+  - testAbandonQuestPersistsEvent()
+
+**Критерии приёмки Фазы 4:**
+- ✅ UserQuestProgress использует RecordsEvents trait
+- ✅ Все методы агрегата генерируют события
+- ✅ UserProgressService сохраняет события в Event Store
+- ✅ Контроллер передаёт platform данные
+- ✅ Все unit и integration тесты проходят
+- ✅ PHPStan Level 5 без ошибок
+
+---
+
+## 📊 COMPONENT BREAKDOWN & DEPENDENCIES
+
+### Новые файлы (15 файлов):
+
+**Shared (3 файла):**
+1. `src/Shared/Domain/Event/DomainEventInterface.php`
+2. `src/Shared/Domain/Event/RecordsEvents.php`
+3. `src/Shared/Domain/Event/README.md`
+
+**UserProgress Events (8 файлов):**
+4. `src/UserProgress/Domain/Event/AbstractUserQuestProgressEvent.php`
+5. `src/UserProgress/Domain/Event/QuestStartedEvent.php`
+6. `src/UserProgress/Domain/Event/QuestResumedEvent.php`
+7. `src/UserProgress/Domain/Event/QuestPausedEvent.php`
+8. `src/UserProgress/Domain/Event/QuestCompletedEvent.php`
+9. `src/UserProgress/Domain/Event/QuestAbandonedEvent.php`
+10. `src/UserProgress/Domain/Event/QuestStepCheckEvent.php`
+11. `src/UserProgress/Domain/Repository/ProgressEventStoreInterface.php`
+
+**Infrastructure (2 файла):**
+12. `src/UserProgress/Infrastructure/Persistence/DoctrineProgressEventStore.php`
+13. `migrations/Version[timestamp].php`
+
+**Tests (2 файла):**
+14. `tests/Shared/Domain/Event/RecordsEventsTest.php`
+15. `tests/UserProgress/Domain/Event/UserQuestProgressEventsTest.php`
+
+### Модифицированные файлы (4 файла):
+1. `src/UserProgress/Domain/Entity/UserQuestProgress.php`
+2. `src/UserProgress/Application/Service/UserProgressService.php`
+3. `src/UserProgress/Presentation/Controller/UserProgressController.php`
+4. `config/services.yaml`
+
+### Граф зависимостей:
+```
+DomainEventInterface (Shared)
+    ↓
+RecordsEvents trait (Shared)
+    ↓
+AbstractUserQuestProgressEvent → 6 concrete events
+    ↓
+UserQuestProgress aggregate (uses RecordsEvents)
+    ↓
+UserProgressService (saves events via ProgressEventStore)
+    ↓
+UserProgressController (extracts platform data)
+```
+
+---
+
+## ⚠️ RISKS & MITIGATIONS
+
+| Риск | Вероятность | Impact | Митигация |
+|------|-------------|--------|-----------|
+| Breaking changes в UserQuestProgress | Средняя | Высокий | Добавить параметры с default значениями, тщательное тестирование |
+| JSONB сериализация ошибки | Низкая | Средний | Try-catch блоки, fallback на пустой JSON {} |
+| Миграция не применяется | Низкая | Высокий | Тестировать миграцию на dev БД перед production |
+| PHPStan errors с новыми типами | Средняя | Низкий | Добавить @phpstan-ignore комментарии где необходимо |
+| Performance: INSERT при каждом изменении | Низкая | Низкий | События записываются синхронно, но это acceptable для MVP |
+| Таблица без PK | Низкая | Средний | Добавить UNIQUE constraint на (aggregate_id, recorded_at, event_type) |
+
+---
+
+## 🧪 TESTING STRATEGY
+
+### Test Coverage Plan:
+
+**Unit Tests (8 тестов, 2 часа):**
+- RecordsEvents trait: 4 теста
+- Domain Events: 5 тестов
+- UserQuestProgress events generation: 6 тестов
+
+**Integration Tests (10 тестов, 2 часа):**
+- DoctrineProgressEventStore: 6 тестов
+- UserProgressService event persistence: 4 тестов
+
+**Manual Testing (1 час):**
+- Создать квест через Postman → проверить event в БД
+- Выполнить lifecycle (start → pause → resume → complete) → проверить 4 события
+- Проверить platform данные корректны (web/mobile)
+- Проверить JSONB сериализацию в БД
+
+**Total Test Time:** ~5 часов (включено в общую оценку)
+
+---
+
+## 🚀 IMPLEMENTATION SEQUENCE
+
+**Day 1 (4-5 часов):**
+1. ФАЗА 1: Shared Infrastructure (2-3ч)
+2. ФАЗА 2: Domain Events (начало, 2ч)
+
+**Day 2 (5-7 часов):**
+3. ФАЗА 2: Domain Events (завершение, 1-2ч)
+4. ФАЗА 3: Event Store & Database (2-3ч)
+5. ФАЗА 4: Aggregate & Service (начало, 2ч)
+
+**Day 3 (опционально, для доработок):**
+6. ФАЗА 4: Aggregate & Service (завершение, 1-2ч)
+7. Финальное тестирование и bugfixes
+
+---
+
+## 🎨 CREATIVE PHASES REQUIRED?
+
+**❌ НЕТ** - Creative фаза НЕ требуется.
+
+**Обоснование:**
+- Все технические решения уже утверждены
+- Структура событий определена
+- Архитектурные паттерны стандартные (DDD, Event Store)
+- Нет UI/UX компонентов для дизайна
+- Нет архитектурных альтернатив для исследования
+
+**Готов к переходу в BUILD режим:** ✅ Да
+
+---
+
+## 📋 УТВЕРЖДЁННАЯ СТРУКТУРА: Доменные события
+
+### 1. Shared Event Sourcing Infrastructure
+
+**Расположение:** `src/Shared/Domain/Event/`
+
+**1.1. Базовый интерфейс DomainEventInterface:**
+```php
+namespace App\Shared\Domain\Event;
+
+use Symfony\Component\Uid\Uuid;
+
+interface DomainEventInterface
+{
+    public function getAggregateId(): Uuid;               // ID агрегата
+    public function getOccurredAt(): \DateTimeImmutable; // Когда произошло
+    public function getEventType(): string;               // FQCN класса события
+    public function getPlatform(): array;                 // Платформа и метаданные
+    public function getEventData(): array;                // Дополнительные данные
+}
+```
+
+**1.2. Trait для агрегатов с поддержкой Event Sourcing:**
+```php
+namespace App\Shared\Domain\Event;
+
+trait RecordsEvents
+{
+    /** @var array<DomainEventInterface> */
+    private array $recordedEvents = [];
+    
+    /**
+     * Получить накопленные события и очистить список
+     * @return array<DomainEventInterface>
+     */
+    public function pull(): array
+    {
+        $events = $this->recordedEvents;
+        $this->recordedEvents = [];
+        return $events;
+    }
+    
+    /**
+     * Записать событие
+     */
+    protected function apply(DomainEventInterface $event): void
+    {
+        $this->recordedEvents[] = $event;
+    }
+}
+```
+
+---
+
+### 2. UserProgress Domain Events
+
+**Расположение:** `src/UserProgress/Domain/Event/`
+
+**2.1. Абстрактный базовый класс для всех событий UserQuestProgress:**
+```php
+namespace App\UserProgress\Domain\Event;
+
+use App\Shared\Domain\Event\DomainEventInterface;
+use Symfony\Component\Uid\Uuid;
+
+abstract class AbstractUserQuestProgressEvent implements DomainEventInterface
+{
+    protected Uuid $aggregateId;
+    protected Uuid $userId;
+    protected Uuid $questId;
+    protected \DateTimeImmutable $occurredAt;
+    protected array $platform;
+    
+    public function __construct(
+        Uuid $aggregateId,
+        Uuid $userId,
+        Uuid $questId,
+        \DateTimeImmutable $occurredAt,
+        array $platform
+    ) {
+        $this->aggregateId = $aggregateId;
+        $this->userId = $userId;
+        $this->questId = $questId;
+        $this->occurredAt = $occurredAt;
+        $this->platform = $platform;
+    }
+    
+    public function getAggregateId(): Uuid
+    {
+        return $this->aggregateId;
+    }
+    
+    public function getUserId(): Uuid
+    {
+        return $this->userId;
+    }
+    
+    public function getQuestId(): Uuid
+    {
+        return $this->questId;
+    }
+    
+    public function getOccurredAt(): \DateTimeImmutable
+    {
+        return $this->occurredAt;
+    }
+    
+    public function getEventType(): string
+    {
+        return static::class;
+    }
+    
+    public function getPlatform(): array
+    {
+        return $this->platform;
+    }
+    
+    /**
+     * Override в дочерних классах для специфичных данных
+     */
+    abstract public function getEventData(): array;
+}
+```
+
+**2.2. Конкретные события:**
+
+#### 2.2.1. QuestStartedEvent
+**Когда:** Пользователь начинает новый квест (первый раз)
+```php
+namespace App\UserProgress\Domain\Event;
+
+final class QuestStartedEvent extends AbstractUserQuestProgressEvent
+{
+    public function getEventData(): array
+    {
+        return []; // Нет дополнительных данных
+    }
+}
+```
+
+#### 2.2.2. QuestResumedEvent
+**Когда:** Пользователь возобновляет квест из паузы
+```php
+namespace App\UserProgress\Domain\Event;
+
+final class QuestResumedEvent extends AbstractUserQuestProgressEvent
+{
+    public function getEventData(): array
+    {
+        return []; // Нет дополнительных данных
+    }
+}
+```
+
+#### 2.2.3. QuestPausedEvent
+**Когда:** Пользователь ставит активный квест на паузу
+```php
+namespace App\UserProgress\Domain\Event;
+
+final class QuestPausedEvent extends AbstractUserQuestProgressEvent
+{
+    public function getEventData(): array
+    {
+        return []; // Нет дополнительных данных
+    }
+}
+```
+
+#### 2.2.4. QuestCompletedEvent
+**Когда:** Пользователь завершает активный квест
+```php
+namespace App\UserProgress\Domain\Event;
+
+final class QuestCompletedEvent extends AbstractUserQuestProgressEvent
+{
+    public function getEventData(): array
+    {
+        return []; // Нет дополнительных данных
+    }
+}
+```
+
+#### 2.2.5. QuestAbandonedEvent
+**Когда:** Пользователь отказывается от квеста (delete progress)
+```php
+namespace App\UserProgress\Domain\Event;
+
+final class QuestAbandonedEvent extends AbstractUserQuestProgressEvent
+{
+    public function getEventData(): array
+    {
+        return []; // Нет дополнительных данных
+    }
+}
+```
+
+#### 2.2.6. QuestStepCheckEvent
+**Когда:** Пользователь проходит проверку шага квеста (checkpoint validation)
+```php
+namespace App\UserProgress\Domain\Event;
+
+use Symfony\Component\Uid\Uuid;
+
+final class QuestStepCheckEvent extends AbstractUserQuestProgressEvent
+{
+    private Uuid $stepId;
+    private float $userLatitude;
+    private float $userLongitude;
+    private float $distanceMeters;
+    private bool $checkPassed;
+    
+    public function __construct(
+        Uuid $progressAggregateId,
+        Uuid $userId,
+        Uuid $questId,
+        \DateTimeImmutable $occurredAt,
+        array $platform,
+        Uuid $stepId,
+        float $userLatitude,
+        float $userLongitude,
+        float $distanceMeters,
+        bool $checkPassed
+    ) {
+        parent::__construct($progressAggregateId, $userId, $questId, $occurredAt, $platform);
+        
+        $this->stepId = $stepId;
+        $this->userLatitude = $userLatitude;
+        $this->userLongitude = $userLongitude;
+        $this->distanceMeters = $distanceMeters;
+        $this->checkPassed = $checkPassed;
+    }
+    
+    public function getEventData(): array
+    {
+        return [
+            'step_id' => (string) $this->stepId,
+            'user_coordinates' => [
+                'latitude' => $this->userLatitude,
+                'longitude' => $this->userLongitude,
+            ],
+            'distance_meters' => $this->distanceMeters,
+            'check_passed' => $this->checkPassed,
+        ];
+    }
+}
+```
+
+---
+
+**Структура getPlatform():**
+```php
+// Для веб-платформы:
+[
+    'type' => 'web',           // 'web' | 'ios' | 'android'
+    'browser' => 'Chrome',     // Название браузера
+    'browser_version' => '120.0.6099.129',
+    'os' => 'macOS',           // ОС пользователя
+]
+
+// Для мобильных приложений:
+[
+    'type' => 'ios',           // или 'android'
+    'app_version' => '1.2.3',  // Версия приложения
+    'os_version' => '17.2',    // Версия iOS/Android
+    'device_model' => 'iPhone 14 Pro',
+]
+```
+
+---
+
+### 3. Event Store - Таблица domain_events_progress
+
+**Структура таблицы:**
+```sql
+CREATE TABLE domain_events_progress (
+    aggregate_id UUID NOT NULL,     -- UserQuestProgress ID
+    user_id UUID NOT NULL,                   -- Для быстрого поиска
+    quest_id UUID NOT NULL,                  -- Для быстрого поиска
+    event_type VARCHAR(255) NOT NULL,        -- FQCN класса события
+    event_data JSONB NOT NULL,               -- Дополнительные данные (может быть {})
+    platform JSONB NOT NULL,                 -- Платформа и метаданные
+    recorded_at TIMESTAMP DEFAULT NOW()      -- Когда записано в БД
+);
+
+-- Индексы для быстрого поиска
+CREATE INDEX idx_progress_events_aggregate ON domain_events_progress(progress_aggregate_id);
+CREATE INDEX idx_progress_events_user ON domain_events_progress(user_id);
+CREATE INDEX idx_progress_events_quest ON domain_events_progress(quest_id);
+CREATE INDEX idx_progress_events_type ON domain_events_progress(event_type);
+CREATE INDEX idx_progress_events_recorded ON domain_events_progress(recorded_at);
+```
+
+**Примеры записей:**
+
+**1. QuestStartedEvent (без event_data):**
+```json
+{
+  "aggregate_id": "123e4567-e89b-12d3-a456-426614174000",
+  "user_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+  "quest_id": "9b4f8a32-0c8d-4e5f-8f2d-7a8b9c0d1e2f",
+  "event_type": "App\\UserProgress\\Domain\\Event\\QuestStartedEvent",
+  "event_data": {},
+  "platform": {
+    "type": "web",
+    "browser": "Chrome",
+    "browser_version": "120.0.6099.129",
+    "os": "macOS"
+  },
+  "recorded_at": "2025-12-26 15:30:00"
+}
+```
+
+**2. QuestCompletedEvent (event_data пустой):**
+```json
+{
+  "aggregate_id": "123e4567-e89b-12d3-a456-426614174000",
+  "user_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+  "quest_id": "9b4f8a32-0c8d-4e5f-8f2d-7a8b9c0d1e2f",
+  "event_type": "App\\UserProgress\\Domain\\Event\\QuestCompletedEvent",
+  "event_data": {},
+  "platform": {
+    "type": "ios",
+    "app_version": "1.2.3",
+    "os_version": "17.2",
+    "device_model": "iPhone 14 Pro"
+  },
+  "recorded_at": "2025-12-26 16:15:00"
+}
+```
+
+**3. QuestStepCheckEvent (с координатами и результатом):**
+```json
+{
+  "aggregate_id": "123e4567-e89b-12d3-a456-426614174000",
+  "user_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+  "quest_id": "9b4f8a32-0c8d-4e5f-8f2d-7a8b9c0d1e2f",
+  "event_type": "App\\UserProgress\\Domain\\Event\\QuestStepCheckEvent",
+  "event_data": {
+    "step_id": "aabbccdd-1234-5678-90ab-cdef12345678",
+    "user_coordinates": {
+      "latitude": 55.7558,
+      "longitude": 37.6173
+    },
+    "distance_meters": 8.5,
+    "check_passed": true
+  },
+  "platform": {
+    "type": "android",
+    "app_version": "1.2.0",
+    "os_version": "14",
+    "device_model": "Samsung Galaxy S23"
+  },
+  "recorded_at": "2025-12-26 15:45:00"
+}
+```
+
+---
+
+### 4. Изменения в агрегате UserQuestProgress
+
+**Использовать RecordsEvents trait:**
+```php
+use App\Shared\Domain\Event\RecordsEvents;
+use App\UserProgress\Domain\Event\QuestStartedEvent;
+use App\UserProgress\Domain\Event\QuestResumedEvent;
+// ... other events
+
+class UserQuestProgress
+{
+    use RecordsEvents;  // Добавляет recordedEvents[], pull(), apply()
+    
+    /**
+     * Start the quest - генерирует QuestStartedEvent или QuestResumedEvent
+     * @param array $platform Данные о платформе клиента
+     */
+    public function start(array $platform): void
+    {
+        $currentStatus = $this->getStatus();
+        
+        if ($currentStatus === QuestStatus::COMPLETED) {
+            throw InvalidQuestStatusException::cannotTransition(/*...*/);
+        }
+        
+        $wasNew = ($this->createdAt === null || $currentStatus === null);
+        $this->status = QuestStatus::ACTIVE->value;
+        $this->updatedAt = new \DateTimeImmutable();
+        
+        // Генерируем событие
+        if ($wasNew) {
+            $this->apply(new QuestStartedEvent(
+                $this->id,
+                $this->userId,
+                $this->questId,
+                $this->updatedAt,
+                $platform
+            ));
+        } else {
+            // Resume from pause
+            $this->apply(new QuestResumedEvent(
+                $this->id,
+                $this->userId,
+                $this->questId,
+                $this->updatedAt,
+                $platform
+            ));
+        }
+    }
+    
+    /**
+     * Pause the quest - генерирует QuestPausedEvent
+     * @param array $platform Данные о платформе клиента
+     */
+    public function pause(array $platform): void
+    {
+        $currentStatus = $this->getStatus();
+        
+        if ($currentStatus !== QuestStatus::ACTIVE) {
+            throw InvalidQuestStatusException::cannotPause($this->questId, $currentStatus);
+        }
+
+        $this->status = QuestStatus::PAUSED->value;
+        $this->updatedAt = new \DateTimeImmutable();
+        
+        $this->apply(new QuestPausedEvent(
+            $this->id,
+            $this->userId,
+            $this->questId,
+            $this->updatedAt,
+            $platform
+        ));
+    }
+    
+    /**
+     * Complete the quest - генерирует QuestCompletedEvent
+     * @param array $platform Данные о платформе клиента
+     */
+    public function complete(array $platform): void
+    {
+        $currentStatus = $this->getStatus();
+        
+        if ($currentStatus !== QuestStatus::ACTIVE) {
+            throw InvalidQuestStatusException::cannotComplete($this->questId, $currentStatus);
+        }
+
+        $this->status = QuestStatus::COMPLETED->value;
+        $this->completedAt = new \DateTimeImmutable();
+        $this->updatedAt = $this->completedAt;
+        
+        // Вычисляем длительность прохождения
+        $interval = $this->createdAt->diff($this->completedAt);
+        $totalDurationMinutes = ($interval->days * 24 * 60) + ($interval->h * 60) + $interval->i;
+        
+        $this->apply(new QuestCompletedEvent(
+            $this->id,
+            $this->userId,
+            $this->questId,
+            $this->updatedAt,
+            $platform,
+            $this->createdAt,
+            $totalDurationMinutes
+        ));
+    }
+    
+    /**
+     * Record step check - генерирует QuestStepCheckEvent
+     * @param Uuid $stepId ID шага квеста
+     * @param float $userLatitude Широта пользователя
+     * @param float $userLongitude Долгота пользователя
+     * @param float $distanceMeters Расстояние до точки
+     * @param bool $checkPassed Результат проверки
+     * @param array $platform Данные о платформе клиента
+     */
+    public function recordStepCheck(
+        Uuid $stepId,
+        float $userLatitude,
+        float $userLongitude,
+        float $distanceMeters,
+        bool $checkPassed,
+        array $platform
+    ): void {
+        $this->apply(new QuestStepCheckEvent(
+            $this->id,
+            $this->userId,
+            $this->questId,
+            new \DateTimeImmutable(),
+            $platform,
+            $stepId,
+            $userLatitude,
+            $userLongitude,
+            $distanceMeters,
+            $checkPassed
+        ));
+    }
+}
+```
+
+**Примечание:** Методы `like()` и `unlike()` НЕ генерируют события (по требованию).
+
+---
+
+### 4. Изменения в сервисе UserProgressService
+
+**Добавить сохранение событий в Event Store:**
+```php
+class UserProgressService
+{
+    public function __construct(
+        private readonly UserQuestProgressRepositoryInterface $progressRepository,
+        private readonly QuestRepositoryInterface $questRepository,
+        private readonly ProgressEventStoreInterface $eventStore  // НОВЫЙ
+    ) {}
+    
+    /**
+     * Start a quest for a user
+     * @param Uuid $userId
+     * @param Uuid $questId
+     * @param array $platform Данные о платформе клиента
+     */
+    public function startQuest(Uuid $userId, Uuid $questId, array $platform): UserQuestProgress
+    {
+        // Verify quest exists
+        $quest = $this->questRepository->findById($questId);
+        if ($quest === null) {
+            throw QuestNotFoundException::withId($questId);
+        }
+
+        // Check if user already has an active quest
+        $activeQuest = $this->progressRepository->findActiveByUserId($userId);
+        if ($activeQuest !== null) {
+            throw ActiveQuestExistsException::forUser($userId, $activeQuest->getQuestId());
+        }
+
+        // Check if progress already exists for this quest
+        $existingProgress = $this->progressRepository->findByUserIdAndQuestId($userId, $questId);
+        
+        if ($existingProgress !== null) {
+            // Resume from paused state
+            $existingProgress->start($platform);
+            $this->progressRepository->save($existingProgress);
+            
+            // Сохранить события (QuestResumedEvent)
+            $this->persistEvents($existingProgress);
+            
+            return $existingProgress;
+        }
+
+        // Create new progress
+        $progress = new UserQuestProgress($userId, $questId);
+        $progress->start($platform);  // Генерирует QuestStartedEvent
+        
+        $this->progressRepository->save($progress);
+        
+        // Сохранить события
+        $this->persistEvents($progress);
+        
+        return $progress;
+    }
+    
+    /**
+     * Pause an active quest
+     * @param Uuid $userId
+     * @param Uuid $questId
+     * @param array $platform Данные о платформе клиента
+     */
+    public function pauseQuest(Uuid $userId, Uuid $questId, array $platform): UserQuestProgress
+    {
+        $progress = $this->progressRepository->findByUserIdAndQuestId($userId, $questId);
+        
+        if ($progress === null) {
+            throw ProgressNotFoundException::forUserAndQuest($userId, $questId);
+        }
+
+        $progress->pause($platform);
+        $this->progressRepository->save($progress);
+        
+        // Сохранить события (QuestPausedEvent)
+        $this->persistEvents($progress);
+
+        return $progress;
+    }
+    
+    /**
+     * Complete an active quest
+     * @param Uuid $userId
+     * @param Uuid $questId
+     * @param array $platform Данные о платформе клиента
+     */
+    public function completeQuest(Uuid $userId, Uuid $questId, array $platform): UserQuestProgress
+    {
+        $progress = $this->progressRepository->findByUserIdAndQuestId($userId, $questId);
+        
+        if ($progress === null) {
+            throw ProgressNotFoundException::forUserAndQuest($userId, $questId);
+        }
+
+        $progress->complete($platform);
+        $this->progressRepository->save($progress);
+        
+        // Сохранить события (QuestCompletedEvent)
+        $this->persistEvents($progress);
+
+        return $progress;
+    }
+    
+    /**
+     * Abandon a quest (delete progress)
+     * @param Uuid $userId
+     * @param Uuid $questId
+     * @param array $platform Данные о платформе клиента
+     */
+    public function abandonQuest(Uuid $userId, Uuid $questId, array $platform): void
+    {
+        $progress = $this->progressRepository->findByUserIdAndQuestId($userId, $questId);
+        
+        if ($progress === null) {
+            throw ProgressNotFoundException::forUserAndQuest($userId, $questId);
+        }
+
+        // Генерируем событие перед удалением
+        $abandonedEvent = new QuestAbandonedEvent(
+            $progress->getId(),
+            $userId,
+            $questId,
+            new \DateTimeImmutable(),
+            $platform
+        );
+        
+        $this->eventStore->append($abandonedEvent);
+        
+        // Удаляем прогресс
+        $this->progressRepository->delete($progress);
+    }
+    
+    /**
+     * Извлечь и сохранить все накопленные события из агрегата
+     */
+    private function persistEvents(UserQuestProgress $progress): void
+    {
+        $events = $progress->pull();
+        
+        foreach ($events as $event) {
+            $this->eventStore->append($event);
+        }
+    }
+}
+```
+
+---
+
+## ✅ РЕШЕНИЯ ПРИНЯТЫ
+
+### 1. Структура событий - УТВЕРЖДЕНО
+- ✅ 6 типов событий (убрали QuestLikedEvent, QuestUnlikedEvent)
+- ✅ Добавлено событие QuestStepCheckEvent с координатами и результатом проверки
+- ✅ Разделили QuestStartedEvent и QuestResumedEvent для чёткой семантики
+- ✅ Добавлен метод getPlatform() для отслеживания источника событий (web/ios/android)
+- ✅ Переименован метод toArray() → getEventData()
+- ✅ getEventData() содержит только дополнительные поля (не aggregateId, userId, questId, occurredAt)
+
+### 2. Event Store - УТВЕРЖДЕНО
+- ✅ Таблица: `domain_events_progress` (специфична для UserQuestProgress)
+- ✅ 5 индексов для быстрого поиска
+- ❌ Version агрегата НЕ хранится (не нужен)
+- ✅ Metadata платформы в отдельном поле `platform` (JSONB)
+
+### 3. Scope изменений - УТВЕРЖДЕНО
+- ❌ Event Handlers (side-effects) - НЕ реализуем в данной задаче
+- ❌ Полный Event Sourcing (восстановление из событий) - НЕ нужен
+- ❌ Saga/Process Manager - НЕ нужен
+
+### 4. Производительность - УТВЕРЖДЕНО
+- ✅ Записываем события **синхронно** (в той же транзакции)
+- ❌ Batch запись - НЕ нужна
+- ❌ Партиционирование таблицы - НЕ нужно
+
+---
+
+---
+
+## 📊 КРАТКОЕ РЕЗЮМЕ УТВЕРЖДЁННОЙ СТРУКТУРЫ
+
+**Иерархия классов:**
+```
+DomainEventInterface (Shared)
+    ↓
+AbstractUserQuestProgressEvent (UserProgress)
+    ↓
+├─ QuestStartedEvent
+├─ QuestResumedEvent
+├─ QuestPausedEvent
+├─ QuestCompletedEvent
+├─ QuestAbandonedEvent
+└─ QuestStepCheckEvent
+```
+
+**Архитектура:**
+- **Shared Infrastructure** (`src/Shared/Domain/Event/`):
+  - `DomainEventInterface` - базовый интерфейс для всех событий
+  - `RecordsEvents` trait - механизм накопления событий для агрегатов
+- **UserProgress Events** (`src/UserProgress/Domain/Event/`):
+  - `AbstractUserQuestProgressEvent` - базовый класс (implements DomainEventInterface)
+  - 6 конкретных событий (extends AbstractUserQuestProgressEvent)
+
+**Доменные события (6 типов):**
+1. `QuestStartedEvent` - начало нового квеста (event_data: `{}`)
+2. `QuestResumedEvent` - возобновление из паузы (event_data: `{}`)
+3. `QuestPausedEvent` - постановка на паузу (event_data: `{}`)
+4. `QuestCompletedEvent` - завершение квеста (event_data: `{}`)
+5. `QuestAbandonedEvent` - отказ от квеста (event_data: `{}`)
+6. `QuestStepCheckEvent` - проверка шага (event_data: step_id, user_coordinates, distance_meters, check_passed)
+
+**Event Store:**
+- Таблица: `domain_events_progress`
+- Поля: aggregate_id, user_id, quest_id, event_type, event_data (JSONB), platform (JSONB), recorded_at
+- Индексы: 5 (aggregate, user, quest, type, recorded_at)
+
+**Ключевые решения:**
+- ✅ Таблица БД НЕ содержит id (PK) и occurred_at поля
+- ✅ События НЕ содержат эти поля в классах (используется только recorded_at)
+- ✅ 5 из 6 событий имеют пустой event_data: `{}`
+- ✅ Только QuestStepCheckEvent имеет данные (без failure_reason)
+- ✅ Убран промежуточный интерфейс UserQuestProgressDomainEventInterface
+- ✅ AbstractUserQuestProgressEvent implements DomainEventInterface напрямую
+- ✅ Агрегат использует RecordsEvents trait из Shared
+- ✅ Platform tracking для всех событий (web/ios/android)
+
+---
+
+## 🎯 ГОТОВО К РЕАЛИЗАЦИИ
+
+**Статус:** 🚀 PLAN COMPLETE → Ready for BUILD Mode  
+**Дата завершения планирования:** 2025-12-26  
+**Следующий шаг:** `/build` для начала реализации Фазы 1
+
+**Утверждённые параметры:**
+- **Complexity Level:** 3-4 (Intermediate to Complex Feature)  
+- **Total Estimated Time:** 9-12 часов
+- **Implementation Approach:** 4 фазы (Shared → Events → Event Store → Integration)
+- **Файлов для создания:** 15 новых файлов
+- **Файлов для модификации:** 4 файла
+- **Тестов:** 18+ unit/integration тестов
+- **Creative Phase:** ❌ НЕТ (все решения утверждены)
+
+**Детальный план включает:**
+- ✅ Breakdown по 4 фазам с временными оценками
+- ✅ Граф зависимостей компонентов
+- ✅ Risk assessment с митигациями
+- ✅ Testing strategy (unit + integration + manual)
+- ✅ Implementation sequence (2-3 дня)
+- ✅ Критерии приёмки для каждой фазы
+
+**Готов к BUILD режиму:** ✅ Да
+
+---
+
+**НАЧАТЬ РЕАЛИЗАЦИЮ:**
+```
+/build  # Начать с Фазы 1: Shared Event Sourcing Infrastructure
+```
 
 ---
 

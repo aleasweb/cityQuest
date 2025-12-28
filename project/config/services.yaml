@@ -45,4 +45,9 @@ services:
     
     # UserProgress Repository binding
     App\UserProgress\Domain\Repository\UserQuestProgressRepositoryInterface:
-        class: App\UserProgress\Infrastructure\Persistence\DoctrineUserQuestProgressRepository
+        class: App\UserProgress\Infrastructure\Db\DoctrineUserQuestProgressRepository
+    
+    # UserProgress Event Store binding
+    App\UserProgress\Domain\Repository\ProgressEventStoreInterface:
+        class: App\UserProgress\Infrastructure\Db\DoctrineProgressEventStore
+        public: true

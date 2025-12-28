@@ -11,13 +11,14 @@ use App\User\Domain\Exception\UserNotFoundException;
 use App\User\Domain\Repository\UserRepositoryInterface;
 use App\UserProgress\Domain\Repository\UserQuestProgressRepositoryInterface;
 use App\Quest\Domain\Repository\QuestRepositoryInterface;
+use App\UserProgress\Domain\ValueObject\QuestStatus;
 
 final class ProfileService
 {
     public function __construct(
-        private UserRepositoryInterface $userRepository,
-        private UserQuestProgressRepositoryInterface $progressRepository,
-        private QuestRepositoryInterface $questRepository,
+        private readonly UserRepositoryInterface $userRepository,
+        private readonly UserQuestProgressRepositoryInterface $progressRepository,
+        private readonly QuestRepositoryInterface $questRepository,
     ) {
     }
 
@@ -80,14 +81,14 @@ final class ProfileService
         $profile['activeQuest'] = $activeQuest ? $this->formatQuestProgress($activeQuest) : null;
 
         // Получаем квесты на паузе
-        $pausedQuests = $this->progressRepository->findByUserIdWithFilters($user->getId(), 'paused', null);
+        $pausedQuests = $this->progressRepository->findByUserIdAndStatus($user->getId(), QuestStatus::PAUSED->value);
         $profile['pausedQuests'] = array_map(
             fn($progress) => $this->formatQuestProgress($progress),
             $pausedQuests
         );
 
         // Получаем 5 последних завершённых квестов
-        $completedQuests = $this->progressRepository->findByUserIdWithFilters($user->getId(), 'completed', null);
+        $completedQuests = $this->progressRepository->findByUserIdAndStatus($user->getId(), QuestStatus::COMPLETED->value);
         // Сортируем по дате завершения (новые первыми) и берём первые 5
         usort($completedQuests, fn($a, $b) => $b->getCompletedAt() <=> $a->getCompletedAt());
         $profile['completedQuests'] = array_map(

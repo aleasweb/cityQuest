@@ -105,6 +105,7 @@ class QuestLikeService
      */
     public function getLikedQuests(Uuid $userId): array
     {
-        return $this->progressRepository->findByUserIdWithFilters($userId, null, true);
+        // @todo запрос ко всем квестам, которые пользователь отметил лайком
+        return [];
     }
 }

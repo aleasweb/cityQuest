@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\UserProgress\Infrastructure\Persistence;
+namespace App\UserProgress\Infrastructure\Db;
 
 use App\UserProgress\Domain\Entity\UserQuestProgress;
 use App\UserProgress\Domain\Repository\UserQuestProgressRepositoryInterface;
@@ -10,9 +10,6 @@ use App\UserProgress\Domain\ValueObject\QuestStatus;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Uid\Uuid;
 
-/**
- * Doctrine implementation of UserQuestProgressRepositoryInterface
- */
 class DoctrineUserQuestProgressRepository implements UserQuestProgressRepositoryInterface
 {
     public function __construct(
@@ -49,7 +46,7 @@ class DoctrineUserQuestProgressRepository implements UserQuestProgressRepository
             ]);
     }
 
-    public function findByUserIdWithFilters(Uuid $userId, ?string $status = null, ?bool $liked = null): array
+    public function findByUserIdAndStatus(Uuid $userId, ?string $status = null): array
     {
         $qb = $this->entityManager->createQueryBuilder();
         
@@ -62,11 +59,6 @@ class DoctrineUserQuestProgressRepository implements UserQuestProgressRepository
         if ($status !== null) {
             $qb->andWhere('p.status = :status')
                 ->setParameter('status', $status);
-        }
-
-        if ($liked !== null) {
-            $qb->andWhere('p.isLiked = :liked')
-                ->setParameter('liked', $liked);
         }
 
         return $qb->getQuery()->getResult();
