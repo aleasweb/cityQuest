@@ -180,14 +180,13 @@ class UserQuestProgress
     }
 
     /**
-     * Reset прогресса по квесту = отказ от квеста
-     * ставим на паузу и сбрасываем весь прогресс по квесту
+     * удаляет квест из списка пользователя
      */
     public function abandon(): void
     {
         $currentStatus = $this->getStatus();
 
-        if (!$currentStatus->canTransitionTo(QuestStatus::PAUSED)) {
+        if (!$currentStatus->canTransitionTo(QuestStatus::NEW)) {
             throw InvalidQuestStatusException::cannotTransition(
                 $this->questId,
                 $currentStatus,

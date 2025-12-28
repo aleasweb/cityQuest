@@ -103,8 +103,8 @@ class UserProgressService
         }
 
         $progress->abandon();
-        $this->progressRepository->save($progress);
         $this->storeEvents($progress);
+        $this->progressRepository->delete($progress);
     }
 
     /**

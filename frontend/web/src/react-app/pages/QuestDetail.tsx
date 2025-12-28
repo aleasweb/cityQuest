@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { ArrowLeft, Heart, Clock, MapPin, User, Route, Loader2, Pause, XCircle } from 'lucide-react';
+import { ArrowLeft, Heart, Clock, MapPin, User, Route, Loader2, Pause, XCircle, Play } from 'lucide-react';
 import { useQuest } from '@/react-app/hooks/useQuests';
 import { useAuth } from '@/react-app/contexts/AuthContext';
 import { api } from '@/shared/api';
@@ -101,11 +101,10 @@ export default function QuestDetail() {
       await api.startQuest(quest.id);
       showToast('Квест успешно запущен!', 'success');
       
-      // Show success modal or redirect
+      // Reload quest data to update status
       setTimeout(() => {
-        // In future: navigate to quest progress page
-        // For now: just show success
-      }, 1500);
+        window.location.reload();
+      }, 1000);
     } catch (err: any) {
       if (err?.message?.includes('409')) {
         // Active quest conflict
@@ -333,8 +332,8 @@ export default function QuestDetail() {
 
             {/* Quest Action Buttons */}
             {quest.questStatus === 'active' ? (
-              // Active quest: Show Pause and Abandon buttons
-              <div className="flex justify-center gap-4">
+              // Active quest: Show Pause button only
+              <div className="flex justify-center">
                 <button
                   onClick={handlePauseQuest}
                   disabled={isPausing}
@@ -345,6 +344,20 @@ export default function QuestDetail() {
                   {isPausing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Pause className="w-5 h-5" />}
                   {isPausing ? 'Пауза...' : 'Поставить на паузу'}
                 </button>
+              </div>
+            ) : quest.questStatus === 'paused' ? (
+              // Paused quest: Show Resume and Abandon buttons
+              <div className="flex justify-center gap-4">
+                <button
+                  onClick={handleStartQuest}
+                  disabled={isStarting}
+                  className={`bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold py-4 px-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2 ${
+                    isStarting ? 'opacity-75 cursor-not-allowed' : ''
+                  }`}
+                >
+                  {isStarting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Play className="w-5 h-5" />}
+                  {isStarting ? 'Запуск...' : 'Продолжить квест'}
+                </button>
                 
                 <button
                   onClick={() => setShowAbandonConfirm(true)}
@@ -354,11 +367,11 @@ export default function QuestDetail() {
                   }`}
                 >
                   {isAbandoning ? <Loader2 className="w-5 h-5 animate-spin" /> : <XCircle className="w-5 h-5" />}
-                  {isAbandoning ? 'Отказ...' : 'Отказаться'}
+                  {isAbandoning ? 'Отказ...' : 'Отказаться от квеста'}
                 </button>
               </div>
             ) : (
-              // Not active: Show Start button
+              // Not started: Show Start button
               <div className="flex justify-center">
                 <button
                   onClick={handleStartQuest}

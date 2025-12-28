@@ -7,12 +7,17 @@ import { api } from '@/shared/api';
 import type { UserProfileWithHistory, QuestProgressItem } from '@/shared/types';
 
 export default function UserProfile() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [profileData, setProfileData] = useState<UserProfileWithHistory | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Не редиректим пока идет проверка авторизации
+    if (authLoading) {
+      return;
+    }
+
     if (!isAuthenticated) {
       navigate('/');
       return;
@@ -32,13 +37,9 @@ export default function UserProfile() {
     };
 
     loadProfileData();
-  }, [isAuthenticated, navigate, user?.username]);
+  }, [authLoading, isAuthenticated, navigate, user?.username]);
 
-  if (!user) {
-    return null;
-  }
-
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <Header />
@@ -47,6 +48,10 @@ export default function UserProfile() {
         </div>
       </div>
     );
+  }
+
+  if (!user) {
+    return null;
   }
 
   return (
