@@ -19,9 +19,9 @@ enum QuestStatus: string
     public function canTransitionTo(self $newStatus): bool
     {
         return match ($this) {
-            self::NEW => in_array($newStatus, [self::ACTIVE, self::PAUSED], true),
+            self::NEW => in_array($newStatus, [self::ACTIVE], true),
             self::ACTIVE => in_array($newStatus, [self::PAUSED, self::COMPLETED], true),
-            self::PAUSED => in_array($newStatus, [self::NEW, self::ACTIVE], true),
+            self::PAUSED => in_array($newStatus, [self::ACTIVE], true),
             self::COMPLETED => false, // Completed quests cannot be changed
         };
     }

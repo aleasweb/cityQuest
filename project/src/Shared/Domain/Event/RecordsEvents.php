@@ -18,18 +18,19 @@ namespace App\Shared\Domain\Event;
  *     
  *     public function doSomething(): void
  *     {
- *         // Изменение состояния
- *         $this->status = 'active';
- *         
  *         // Генерация события
- *         $this->(new SomethingHappenedEvent(...));
+ *         $this->apply(new SomethingHappenedEvent(...));
  *     }
  *
- *     protected function mutate
+ *     protected function mutate(DomainEventInterface $event): void
+ *     {
+ *          // Изменение состояния
+ *          switch ($event::class) {
+ *              case QuestStartedEvent::class:
+ *                  $this->status = 'active';
+ *     }
  * }
  * ```
- * 
- * @package App\Shared\Domain\Event
  */
 trait RecordsEvents
 {

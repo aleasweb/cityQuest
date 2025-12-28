@@ -50,9 +50,10 @@ final class Platform
     public static function fromArray(array $data): self
     {
         $type = $data['type'] ?? 'unknown';
-        unset($data['type']);
-        
-        return new self($type, $data);
+        $metadata = $data;
+        unset($metadata['type']);
+
+        return new self($type, $metadata);
     }
 
     public function getType(): string

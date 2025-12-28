@@ -69,7 +69,10 @@ final class DoctrineProgressEventStore implements ProgressEventStoreInterface
             'quest_id' => $event->getQuestId()->toRfc4122(),
             'event_type' => $event->getEventType(),
             'event_data' => json_encode($event->getEventData(), JSON_THROW_ON_ERROR),
-            'platform' => json_encode($event->getPlatform()->toArray(), JSON_THROW_ON_ERROR),
+            'platform' => json_encode(
+                $event->getPlatform()?->toArray() ?? ['type' => 'unknown'],
+                JSON_THROW_ON_ERROR
+            ),
             'occurred_at' => $event->getOccurredAt()->format('Y-m-d H:i:s'),
         ]);
     }
@@ -151,60 +154,34 @@ final class DoctrineProgressEventStore implements ProgressEventStoreInterface
         $occurredAt = new \DateTimeImmutable($row['occurred_at']);
         $platformData = json_decode($row['platform'], true, 512, JSON_THROW_ON_ERROR);
         $platform = Platform::fromArray($platformData);
-        $eventData = json_decode($row['event_data'], true, 512, JSON_THROW_ON_ERROR);
         $eventType = $row['event_type'];
 
-        return match ($eventType) {
-            QuestStartedEvent::class => new QuestStartedEvent(
-                $aggregateId,
-                $userId,
-                $questId,
-                $occurredAt,
-                $platform
-            ),
-            QuestResumedEvent::class => new QuestResumedEvent(
-                $aggregateId,
-                $userId,
-                $questId,
-                $occurredAt,
-                $platform
-            ),
-            QuestPausedEvent::class => new QuestPausedEvent(
-                $aggregateId,
-                $userId,
-                $questId,
-                $occurredAt,
-                $platform
-            ),
-            QuestCompletedEvent::class => new QuestCompletedEvent(
-                $aggregateId,
-                $userId,
-                $questId,
-                $occurredAt,
-                $platform
-            ),
-            QuestAbandonedEvent::class => new QuestAbandonedEvent(
-                $aggregateId,
-                $userId,
-                $questId,
-                $occurredAt,
-                $platform
-            ),
-            QuestStepCheckEvent::class => new QuestStepCheckEvent(
-                $aggregateId,
-                $userId,
-                $questId,
-                $occurredAt,
-                $platform,
+        // ✅ Простые события без дополнительных данных
+        $simpleEvents = [
+            QuestStartedEvent::class,
+            QuestResumedEvent::class,
+            QuestPausedEvent::class,
+            QuestCompletedEvent::class,
+            QuestAbandonedEvent::class,
+        ];
+
+        if (in_array($eventType, $simpleEvents, true)) {
+            return new $eventType($aggregateId, $userId, $questId, $occurredAt, $platform);
+        }
+
+        // QuestStepCheckEvent - отдельная обработка
+        if ($eventType === QuestStepCheckEvent::class) {
+            $eventData = json_decode($row['event_data'], true, 512, JSON_THROW_ON_ERROR);
+            return new QuestStepCheckEvent(
+                $aggregateId, $userId, $questId, $occurredAt, $platform,
                 $eventData['client_latitude'],
                 $eventData['client_longitude'],
                 $eventData['distance_to_point'],
                 $eventData['check_passed']
-            ),
-            default => throw new \RuntimeException(
-                sprintf('Unknown event type: %s', $eventType)
-            ),
-        };
+            );
+        }
+
+        throw new \RuntimeException(sprintf('Unknown event type: %s', $eventType));
     }
 }
 

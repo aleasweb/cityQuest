@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\UserProgress\Domain\Entity;
 
-use App\Platform\ValueObject\Platform;
 use App\Shared\Domain\Event\RecordsEvents;
 use App\UserProgress\Domain\Event\AbstractUserQuestProgressEvent;
 use App\UserProgress\Domain\Event\QuestAbandonedEvent;
@@ -55,7 +54,7 @@ class UserQuestProgress
         $this->id = Uuid::v4();
         $this->userId = $userId;
         $this->questId = $questId;
-        $this->status = QuestStatus::ACTIVE->value;
+        $this->status = QuestStatus::NEW->value;
         $this->createdAt = new DateTimeImmutable();
         $this->updatedAt = new DateTimeImmutable();
     }
@@ -102,8 +101,9 @@ class UserQuestProgress
 
     public function start(): void
     {
-        $currentStatus = QuestStatus::NEW;
-        if ($currentStatus->canTransitionTo(QuestStatus::ACTIVE)) {
+        $currentStatus = $this->getStatus();
+
+        if (!$currentStatus->canTransitionTo(QuestStatus::ACTIVE)) {
             throw InvalidQuestStatusException::cannotTransition(
                 $this->questId,
                 $currentStatus,
@@ -123,7 +123,7 @@ class UserQuestProgress
     {
         $currentStatus = $this->getStatus();
         
-        if ($currentStatus->canTransitionTo(QuestStatus::PAUSED)) {
+        if (!$currentStatus->canTransitionTo(QuestStatus::PAUSED)) {
             throw InvalidQuestStatusException::cannotTransition(
                 $this->questId,
                 $currentStatus,
@@ -141,7 +141,7 @@ class UserQuestProgress
     public function resume(): void
     {
         $currentStatus = $this->getStatus();
-        if ($currentStatus->canTransitionTo(QuestStatus::ACTIVE)) {
+        if (!$currentStatus->canTransitionTo(QuestStatus::ACTIVE)) {
             throw InvalidQuestStatusException::cannotTransition(
                 $this->questId,
                 $currentStatus,
@@ -161,7 +161,7 @@ class UserQuestProgress
     {
         $currentStatus = $this->getStatus();
         
-        if ($currentStatus->canTransitionTo(QuestStatus::COMPLETED)) {
+        if (!$currentStatus->canTransitionTo(QuestStatus::COMPLETED)) {
             throw InvalidQuestStatusException::cannotTransition(
                 $this->questId,
                 $currentStatus,
@@ -179,13 +179,14 @@ class UserQuestProgress
     }
 
     /**
-     * отказ от квеста
+     * Reset прогресса по квесту = отказ от квеста
+     * ставим на паузу и сбрасываем весь прогресс по квесту
      */
-    public function abandon(Platform $platform): void
+    public function abandon(): void
     {
         $currentStatus = $this->getStatus();
 
-        if ($currentStatus->canTransitionTo(QuestStatus::PAUSED)) {
+        if (!$currentStatus->canTransitionTo(QuestStatus::PAUSED)) {
             throw InvalidQuestStatusException::cannotTransition(
                 $this->questId,
                 $currentStatus,
@@ -220,7 +221,7 @@ class UserQuestProgress
         return $this->isLiked;
     }
 
-    private function mutate(AbstractUserQuestProgressEvent $event): void
+    protected function mutate(AbstractUserQuestProgressEvent $event): void
     {
         $now = new DateTimeImmutable();
         $this->updatedAt = $now;
@@ -234,7 +235,7 @@ class UserQuestProgress
                 break;
             case QuestAbandonedEvent::class:
                 // @todo сбрасываем прогресс
-                $this->status = QuestStatus::ACTIVE->value; // Возвращаем в active для возможно
+                $this->status = QuestStatus::PAUSED->value;
                 break;
             case QuestCompletedEvent::class:
                 $this->status = QuestStatus::COMPLETED->value;
@@ -247,6 +248,7 @@ class UserQuestProgress
                 break;
         };
     }
+
 
     public function toArray(): array
     {
