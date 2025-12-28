@@ -5,24 +5,24 @@
 ## 🛠️ Технологический стек
 
 ### Backend
-- **Framework:** Symfony 6.4+
-- **PHP:** 8.3
+- **Framework:** Symfony 6.4
+- **PHP:** 8.2+
 - **Database:** PostgreSQL 16
-- **ORM:** Doctrine ORM
-- **Authentication:** Symfony Security Bundle
-- **Events:** Symfony Messenger (sync mode)
-- **Testing:** PHPUnit 10+
-- **Code Quality:** PHPStan, PHP-CS-Fixer
+- **ORM:** Doctrine ORM 3.0
+- **Authentication:** Symfony Security Bundle + Lexik JWT
+- **Events:** Symfony Messenger (sync mode) + Domain Events
+- **Testing:** PHPUnit 9.5
+- **Code Quality:** PHPStan Level 5, PHP-CS-Fixer 3.51
 
 ### Frontend
-- **Framework:** React 18
-- **Build Tool:** Vite
-- **Language:** TypeScript 5+
-- **Styling:** Tailwind CSS
-- **Routing:** React Router 6
-- **State Management:** Zustand
-- **Maps:** React-Leaflet (OpenStreetMap)
-- **i18n:** i18next
+- **Framework:** React 19
+- **Build Tool:** Vite 6.3
+- **Language:** TypeScript 5.8
+- **Styling:** Tailwind CSS 3.4
+- **Routing:** React Router 7.5
+- **Validation:** Zod 3.24
+- **JWT:** jwt-decode 4.0
+- **Icons:** lucide-react
 
 ### Infrastructure
 - **Containerization:** Docker + Docker Compose
@@ -49,98 +49,130 @@ services:
 
 ### Backend (composer.json)
 Основные:
-- `symfony/framework-bundle`
-- `symfony/security-bundle`
-- `symfony/messenger` - обработка доменных событий
-- `symfony/doctrine-messenger` - Doctrine транспорт для Messenger
-- `doctrine/orm`
-- `doctrine/doctrine-bundle`
-- `doctrine/doctrine-migrations-bundle`
-- `monolog/monolog`
-- `twig/twig`
+- `symfony/framework-bundle` 6.4
+- `symfony/security-bundle` 6.4
+- `symfony/messenger` 6.4 - обработка доменных событий
+- `symfony/doctrine-messenger` 6.4
+- `lexik/jwt-authentication-bundle` 3.1 - JWT auth
+- `nelmio/cors-bundle` 2.6 - CORS
+- `doctrine/orm` 3.0
+- `doctrine/dbal` 3
+- `doctrine/doctrine-bundle` 2.11
+- `doctrine/doctrine-migrations-bundle` 3.3
+- `symfony/uid` 6.4 - UUID support
+- `symfony/validator` 6.4
+- `symfony/monolog-bundle` 3.0
 
 Dev:
-- `phpunit/phpunit`
-- `phpstan/phpstan`
-- `friendsofphp/php-cs-fixer`
-- `symfony/web-profiler-bundle`
+- `phpunit/phpunit` 9.5
+- `phpstan/phpstan` 1.10
+- `friendsofphp/php-cs-fixer` 3.51
+- `symfony/web-profiler-bundle` 6.4
+- `symfony/maker-bundle` 1.55
 
 ### Frontend (package.json)
 Основные:
-- `react`
-- `react-dom`
-- `react-router-dom`
-- `zustand`
-- `leaflet`
-- `react-leaflet`
-- `i18next`
+- `react` 19.0
+- `react-dom` 19.0
+- `react-router` 7.5
+- `zod` 3.24 - валидация
+- `jwt-decode` 4.0 - JWT decoding
+- `lucide-react` 0.510 - icons
 
 Dev:
-- `vite`
-- `typescript`
-- `eslint`
-- `tailwindcss`
-- `postcss`
+- `vite` 6.3
+- `typescript` 5.8
+- `@vitejs/plugin-react` 4.4
+- `eslint` 9.25
+- `tailwindcss` 3.4
+- `postcss` 8.5
+- `autoprefixer` 10.4
 
 ## 🗄️ Структура базы данных
 
 ### Основные таблицы
 
 1. **users**
-   - id, email, password, username
+   - id (UUID), email, password, username
+   - roles (JSON), created_at
    - Хранение пользователей
 
 2. **quests**
-   - id, title, description, city, difficulty
+   - id (UUID), title, description, city, difficulty
    - duration_minutes, distance_km, image_url
    - author, likes_count, is_popular
+   - latitude, longitude (геолокация)
+   - created_at, updated_at
    - Хранение квестов
 
-3. **quest_steps**
-   - id, quest_id, title, text
-   - image_url, audio_url, video_url
-   - lat, lng, radius
-   - Этапы квестов
+3. **user_quest_progress**
+   - id (UUID), user_id (FK), quest_id (FK)
+   - status (active/paused/completed)
+   - is_liked, completed_at
+   - created_at, updated_at
+   - Прогресс прохождения + лайки
 
-4. **user_quest_progress**
-   - id, user_id, quest_id
-   - is_completed, is_liked, completed_at
-   - Прогресс прохождения
+4. **domain_events_progress** (CQST-010)
+   - id (INT auto), aggregate_id (UUID)
+   - event_type, event_data (JSON)
+   - occurred_at, platform, created_at
+   - Event Store для UserProgress events
 
-## 🌐 API Endpoints
+## 🌐 API Endpoints (20 endpoints)
 
-### Аутентификация
-- `POST /api/auth/register` - Регистрация (email, username, password)
-- `POST /api/auth/login` - Вход (username, password) → JWT token
-- `POST /api/auth/logout` - Выход
+### Аутентификация (4)
+- `POST /api/auth/register` - Регистрация
+- `POST /api/auth/login` - Вход → JWT cookie (HttpOnly)
+- `GET /api/auth/me` - Текущий пользователь
+- `POST /api/auth/logout` - Выход + clear cookie
 
-### Квесты (публичные)
-- `GET /api/quests` - Список с фильтрами
-- `GET /api/quests/nearby` - Поиск рядом
-- `GET /api/quests/{id}` - Детали
+### Пользователи (2)
+- `GET /api/user/profile` - Мой профиль (JWT)
+- `PATCH /api/user/profile` - Обновить профиль (JWT)
+- `GET /api/users/{username}` - Публичный профиль
 
-### Квесты (авторизованные)
+### Квесты (публичные, 3)
+- `GET /api/quests` - Список (filters, sort, pagination)
+- `GET /api/quests/nearby` - Геопоиск (Haversine)
+- `GET /api/quests/{id}` - Детали (опциональный JWT)
+
+### Прогресс (JWT required, 6)
+- `GET /api/user/progress` - Мой прогресс (фильтры)
+- `POST /api/user/progress/{questId}/start` - Начать квест
+- `PATCH /api/user/progress/{questId}/pause` - Пауза
+- `PATCH /api/user/progress/{questId}/complete` - Завершить
+- `DELETE /api/user/progress/{questId}` - Бросить квест
 - `POST /api/quests/{id}/like` - Лайк/дизлайк
 
-### Прогресс
-- `GET /api/user/progress` - Прогресс пользователя
-- `POST /api/user/progress/{questId}/start` - Начать
-- `PATCH /api/user/progress/{questId}/complete` - Завершить
+### Справочники (2)
+- `GET /api/cities` - Список городов
+- `GET /api/health` - Health check
 
 ## 🔐 Безопасность
 
 ### Аутентификация
-- JWT токены для API (username-based login)
-- Авторизация через пару username + password
-- Bcrypt для хеширования паролей
+- JWT токены в HttpOnly cookies (CQST-008)
+- Username-based login
+- Bcrypt password hashing
+- Lexik JWT Authentication Bundle
+
+### Security Headers (CQST-008)
+- X-Frame-Options: DENY
+- X-Content-Type-Options: nosniff
+- X-XSS-Protection: 1; mode=block
+- Referrer-Policy: same-origin
+- Content-Security-Policy
+- Permissions-Policy
 
 ### CORS
-- Настроен для frontend домена
+- Nelmio CORS Bundle
+- Credentials: include (для cookies)
 - Whitelist доменов
 
 ### Валидация
-- Symfony Validator для входных данных
-- Sanitization всех пользовательских вводов
+- Symfony Validator для DTO
+- Zod schemas на frontend
+- Sanitization входных данных
 
 ## 🧪 Тестирование
 
@@ -240,7 +272,8 @@ npm run preview
 
 ---
 
-**Последнее обновление:** 2025-10-26
+**Последнее обновление:** 2025-12-28  
+**Версия:** 2.0 (обновлено после CQST-010)
 
 ---
 
@@ -506,4 +539,148 @@ docker-compose exec php-fpm php bin/console doctrine:migrations:migrate --env=te
 
 **Reflection:** `memory-bank/reflection/reflection-CQST-005-refactoring.md`  
 **Patterns:** `memory-bank/systemPatterns.md` (Testing Infrastructure Patterns)
+
+---
+
+## 📦 Domain Events & Event Sourcing (Added: 2025-12-28, CQST-010)
+
+### Event Sourcing Infrastructure
+
+**Purpose:** Полная история изменений UserProgress через domain events
+
+**Components:**
+
+#### 1. Domain Events (6 событий)
+- `QuestStartedEvent` - квест начат
+- `QuestPausedEvent` - квест поставлен на паузу
+- `QuestResumedEvent` - квест возобновлён
+- `QuestCompletedEvent` - квест завершён
+- `QuestAbandonedEvent` - квест брошен
+- `QuestStepCheckEvent` - чекпоинт проверен (stepNumber, isCorrect)
+
+**Базовый класс:** `AbstractUserQuestProgressEvent`
+- progressId (UUID)
+- userId (UUID)
+- questId (UUID)
+- occurredAt (DateTimeImmutable)
+- platform (Platform enum: web/ios/android)
+
+#### 2. RecordsEvents Trait
+```php
+trait RecordsEvents {
+    private array $domainEvents = [];
+    
+    protected function recordEvent(DomainEventInterface $event): void;
+    public function releaseEvents(): array;
+}
+```
+
+**Usage:** Интегрирован в `UserQuestProgress` entity
+
+#### 3. Event Store
+- **Interface:** `ProgressEventStoreInterface`
+- **Implementation:** `DoctrineProgressEventStore` (DBAL-based)
+- **Methods:**
+  - `append(DomainEventInterface $event): void`
+  - `getEventsForProgress(Uuid $progressId): array`
+  - `getEventsForUser(Uuid $userId): array`
+
+#### 4. Database Schema
+
+**Table:** `domain_events_progress`
+```sql
+id            SERIAL          -- auto-increment для ordering
+aggregate_id  UUID            -- progress_id
+event_type    VARCHAR(255)    -- полное имя класса события
+event_data    JSON            -- сериализованные данные события
+occurred_at   TIMESTAMP       -- когда событие произошло
+platform      VARCHAR(20)     -- web/ios/android
+created_at    TIMESTAMP       -- когда событие записано в БД
+```
+
+**Индексы (5):**
+- `idx_aggregate_occurred` - для запросов по aggregate
+- `idx_event_type` - для фильтрации по типу события
+- `idx_occurred_at` - для temporal queries
+- `idx_platform` - для аналитики по платформам
+- `idx_created_at` - для audit trail
+
+#### 5. Integration with Service Layer
+
+**UserProgressService** обновлён:
+```php
+public function startQuest(Uuid $userId, Uuid $questId): UserQuestProgress {
+    // 1. Domain logic
+    $progress->start();
+    
+    // 2. Persist aggregate
+    $this->repository->save($progress);
+    
+    // 3. Store events
+    foreach ($progress->releaseEvents() as $event) {
+        $this->eventStore->append($event);
+    }
+    
+    return $progress;
+}
+```
+
+**Все методы обновлены:** start(), pause(), resume(), complete(), abandon()
+
+### Benefits
+
+**✅ Analytics-Ready**
+- "Сколько квестов начато сегодня?"
+- "Какие квесты чаще всего бросают?"
+- "С какой платформы больше активности?"
+
+**✅ Audit Trail**
+- Полная неизменяемая история
+- Когда и кем выполнено действие
+- Platform attribution
+
+**✅ Event Replay**
+- Восстановление состояния
+- Debugging
+- Миграция данных
+
+**✅ Future-Ready**
+- Готовая инфраструктура для Event Handlers
+- Источник для CQRS read models
+- Foundation для real-time notifications
+
+### Bonus: Platform Resolver
+
+**Service:** `PlatformResolver`
+- Определяет платформу из User-Agent header
+- Автоматическая аттрибуция событий
+- Enum: `Platform::WEB | Platform::IOS | Platform::ANDROID`
+
+**Value Object:** `Platform` (enum)
+- Immutable
+- Type-safe
+- Используется в событиях для аналитики
+
+### Testing
+
+**Coverage:** 19 тестов (12 unit + 7 integration)
+- Unit: Domain events, RecordsEvents trait, Event Store
+- Integration: UserProgressService с event recording
+
+**Pass Rate:** 100% ✅
+
+### Metrics
+
+- **Новых файлов:** 17
+- **Модифицированных:** 3 (UserQuestProgress, UserProgressService, Repository)
+- **Тестов:** 19 (12 unit + 7 integration)
+- **Migration:** 1 (domain_events_progress table + 5 indexes)
+- **Время:** ~10ч (оценка: 9-12ч)
+
+### Documentation
+
+- **Reflection:** `memory-bank/reflection/reflection-CQST-010.md`
+- **Archive:** `memory-bank/archive/archive-CQST-010-20251228.md`
+- **README:** `project/src/UserProgress/Domain/Event/README.md`
+- **Patterns:** `memory-bank/systemPatterns.md` (Domain Events & Event Sourcing)
 

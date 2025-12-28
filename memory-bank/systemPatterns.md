@@ -11,21 +11,44 @@
 src/
 ├── User/                      # Домен пользователей
 │   ├── Domain/               # Бизнес-логика
-│   │   ├── Entity/          # Сущности
-│   │   ├── Repository/      # Интерфейсы репозиториев
-│   │   └── Service/         # Доменные сервисы
+│   │   ├── Entity/          # User
+│   │   ├── Event/           # UserWasRegistered
+│   │   ├── Repository/      # UserRepositoryInterface
+│   │   └── Exception/       # Domain exceptions
 │   ├── Application/         # Уровень приложения
-│   │   ├── DTO/            # Data Transfer Objects
-│   │   └── Service/        # Сервисы приложения
+│   │   ├── DTO/            # RegisterUserRequest, UpdateProfileRequest
+│   │   ├── Service/        # AuthenticationService, ProfileService
+│   │   └── EventHandler/   # UserWasRegisteredHandler
 │   ├── Infrastructure/      # Технические детали
-│   │   ├── Db/             # Реализация для БД
-│   │   └── Cache/          # Реализация для кеша
+│   │   ├── Db/             # DoctrineUserRepository
+│   │   └── EventSubscriber/# JWTAuthenticationSubscriber
 │   └── Presentation/        # Интерфейсы
-│       ├── Controller/     # HTTP контроллеры
-│       ├── Cli/            # CLI команды
-│       └── View/           # Представления
+│       └── Controller/     # AuthController, ProfileController
 ├── Quest/                    # Домен квестов
-└── HealthCheck/             # Проверка здоровья системы
+│   ├── Domain/              # Quest, QuestRepositoryInterface
+│   ├── Application/         # QuestService, QuestListService
+│   ├── Infrastructure/      # DoctrineQuestRepository
+│   └── Presentation/        # QuestController
+├── UserProgress/            # Домен прогресса (CQST-010)
+│   ├── Domain/              
+│   │   ├── Entity/         # UserQuestProgress
+│   │   ├── Event/          # 6 domain events + RecordsEvents trait
+│   │   ├── Repository/     # 2 interfaces (Progress + EventStore)
+│   │   └── ValueObject/    # QuestStatus
+│   ├── Application/         # UserProgressService, QuestLikeService
+│   ├── Infrastructure/      
+│   │   └── Db/             # Doctrine repos + EventStore (DBAL)
+│   └── Presentation/        # UserProgressController
+├── Platform/                # Shared (CQST-010 bonus)
+│   ├── Application/         # PlatformResolver
+│   └── ValueObject/         # Platform
+├── Shared/                  # Общие компоненты
+│   ├── Authentication/Trait/# AuthenticationTrait
+│   └── Domain/Event/       # DomainEventInterface, RecordsEvents
+├── City/                    # Справочник городов
+│   └── Presentation/        # CityController
+└── HealthCheck/             # Проверка здоровья
+    └── Presentation/        # HealthCheckController
 ```
 
 ### Принципы разделения
@@ -55,19 +78,28 @@ src/
 ```
 src/
 ├── react-app/
-│   ├── components/         # Переиспользуемые компоненты
-│   ├── pages/             # Страницы
-│   ├── hooks/             # Custom hooks
-│   ├── store/             # Zustand stores
-│   └── utils/             # Утилиты
-├── shared/                # Общий код
-└── worker/                # Web workers
+│   ├── components/         # Toast, ActiveQuestModal, QuestCard
+│   ├── pages/             # HomePage, QuestDetail, UserProfile
+│   ├── context/           # AuthContext
+│   └── routes.tsx         # React Router
+├── shared/                
+│   ├── api.ts             # HTTP client (JWT cookies)
+│   ├── cacheManager.ts    # LocalStorage cache (CQST-009)
+│   └── types.ts           # TypeScript types + Zod schemas
+└── index.css              # Tailwind
 ```
 
-### State Management (Zustand)
-- Простое и легкое управление состоянием
-- Минимальный boilerplate
-- TypeScript support
+### State Management
+- React Context API (AuthContext)
+- Local component state (useState, useEffect)
+- URL params для фильтров (React Router)
+- LocalStorage для кеширования (CacheManager)
+
+### Client-side Caching (CQST-009)
+- CacheManager утилита с TTL
+- Stale-while-error fallback
+- До 40x faster для повторных запросов
+- -95% network requests для /api/cities
 
 ## 🗄️ Паттерны работы с данными
 
@@ -141,7 +173,8 @@ php bin/phpunit  # Не будет работать локально!
 
 ---
 
-**Последнее обновление:** 2025-10-25
+**Последнее обновление:** 2025-12-28  
+**Версия:** 3.0 (обновлено после CQST-010 - Domain Events & Event Sourcing)
 
 ---
 
@@ -489,6 +522,240 @@ try {
 
 **Pattern Source:** Task CQST-001 - Registration and Authentication System  
 **Documentation:** `memory-bank/reflection/reflection-CQST-001.md`, `project/docs/EVENTS.md`
+
+---
+
+## 📦 Domain Events & Event Sourcing (Added: 2025-12-28, CQST-010)
+
+### Pattern: Event Sourcing для UserProgress Domain
+
+**Usage:** Полная история изменений прогресса квестов через domain events
+
+**Implementation:**
+
+#### 1. Domain Events (6 событий)
+```php
+// Базовый абстрактный класс
+abstract class AbstractUserQuestProgressEvent implements DomainEventInterface {
+    public function __construct(
+        private readonly Uuid $progressId,
+        private readonly Uuid $userId,
+        private readonly Uuid $questId,
+        private readonly \DateTimeImmutable $occurredAt,
+        private readonly ?Platform $platform = null
+    ) {}
+}
+
+// Конкретные события
+class QuestStartedEvent extends AbstractUserQuestProgressEvent {}
+class QuestPausedEvent extends AbstractUserQuestProgressEvent {}
+class QuestResumedEvent extends AbstractUserQuestProgressEvent {}
+class QuestCompletedEvent extends AbstractUserQuestProgressEvent {}
+class QuestAbandonedEvent extends AbstractUserQuestProgressEvent {}
+class QuestStepCheckEvent extends AbstractUserQuestProgressEvent {
+    public function __construct(
+        Uuid $progressId, Uuid $userId, Uuid $questId,
+        \DateTimeImmutable $occurredAt,
+        private readonly int $stepNumber,
+        private readonly bool $isCorrect,
+        ?Platform $platform = null
+    ) {
+        parent::__construct($progressId, $userId, $questId, $occurredAt, $platform);
+    }
+}
+```
+
+#### 2. RecordsEvents Trait
+```php
+trait RecordsEvents {
+    private array $domainEvents = [];
+
+    protected function recordEvent(DomainEventInterface $event): void {
+        $this->domainEvents[] = $event;
+    }
+
+    public function releaseEvents(): array {
+        $events = $this->domainEvents;
+        $this->domainEvents = [];
+        return $events;
+    }
+}
+```
+
+#### 3. Entity Integration
+```php
+class UserQuestProgress {
+    use RecordsEvents;
+
+    public function start(): void {
+        if ($this->status !== null) {
+            throw new InvalidQuestStatusException('Quest already started');
+        }
+        
+        $this->status = QuestStatus::Active;
+        $this->recordEvent(new QuestStartedEvent(
+            $this->id,
+            $this->user->getId(),
+            $this->quest->getId(),
+            new \DateTimeImmutable()
+        ));
+    }
+
+    // pause(), resume(), complete(), abandon() аналогично
+}
+```
+
+#### 4. Event Store (DBAL-based)
+```php
+interface ProgressEventStoreInterface {
+    public function append(DomainEventInterface $event): void;
+    public function getEventsForProgress(Uuid $progressId): array;
+    public function getEventsForUser(Uuid $userId): array;
+}
+
+class DoctrineProgressEventStore implements ProgressEventStoreInterface {
+    public function __construct(private Connection $connection) {}
+
+    public function append(DomainEventInterface $event): void {
+        $this->connection->insert('domain_events_progress', [
+            'aggregate_id' => $event->getProgressId()->toRfc4122(),
+            'event_type' => $event::class,
+            'event_data' => json_encode([
+                'user_id' => $event->getUserId()->toRfc4122(),
+                'quest_id' => $event->getQuestId()->toRfc4122(),
+                'occurred_at' => $event->getOccurredAt()->format('Y-m-d H:i:s'),
+                'platform' => $event->getPlatform()?->value,
+                // specific event data...
+            ]),
+            'occurred_at' => $event->getOccurredAt()->format('Y-m-d H:i:s'),
+            'platform' => $event->getPlatform()?->value,
+            'created_at' => (new \DateTimeImmutable())->format('Y-m-d H:i:s'),
+        ]);
+    }
+}
+```
+
+#### 5. Service Layer Integration
+```php
+class UserProgressService {
+    public function __construct(
+        private UserQuestProgressRepositoryInterface $repository,
+        private ProgressEventStoreInterface $eventStore
+    ) {}
+
+    public function startQuest(Uuid $userId, Uuid $questId): UserQuestProgress {
+        // Domain logic
+        $progress = new UserQuestProgress($user, $quest);
+        $progress->start();
+
+        // Persist aggregate
+        $this->repository->save($progress);
+
+        // Store events
+        foreach ($progress->releaseEvents() as $event) {
+            $this->eventStore->append($event);
+        }
+
+        return $progress;
+    }
+}
+```
+
+### Benefits
+
+**✅ Complete History**
+- Каждое действие записано как событие
+- Неизменяемый (append-only) лог
+- Audit trail из коробки
+
+**✅ Temporal Queries**
+- "Сколько квестов начато сегодня?"
+- "Какие квесты чаще всего бросают на 3 шаге?"
+- "С какой платформы больше активности?"
+
+**✅ Event Replay**
+- Восстановление состояния из событий
+- Debugging и анализ
+- Миграция данных
+
+**✅ Analytics Foundation**
+- Готовая инфраструктура для аналитики
+- Источник данных для отчётов
+- Platform-aware (web/ios/android)
+
+### Database Schema
+
+```sql
+CREATE TABLE domain_events_progress (
+    id SERIAL,  -- auto-increment для ordering
+    aggregate_id UUID NOT NULL,  -- progress_id
+    event_type VARCHAR(255) NOT NULL,
+    event_data JSON NOT NULL,
+    occurred_at TIMESTAMP NOT NULL,
+    platform VARCHAR(20),
+    created_at TIMESTAMP NOT NULL
+);
+
+-- Индексы для эффективных запросов
+CREATE INDEX idx_aggregate_occurred ON domain_events_progress(aggregate_id, occurred_at);
+CREATE INDEX idx_event_type ON domain_events_progress(event_type);
+CREATE INDEX idx_occurred_at ON domain_events_progress(occurred_at);
+CREATE INDEX idx_platform ON domain_events_progress(platform);
+CREATE INDEX idx_created_at ON domain_events_progress(created_at);
+```
+
+### Trade-offs
+
+**Pros:**
+- ✅ Полная история действий
+- ✅ Готовая инфраструктура для аналитики
+- ✅ Audit trail
+- ✅ Temporal queries
+
+**Cons:**
+- ❌ Дополнительные записи в БД (событие + aggregate)
+- ❌ Больше кода для поддержки
+- ❌ Storage overhead (JSON в event_data)
+
+**When to Use:**
+- ✅ Критичная история изменений (audit)
+- ✅ Аналитика и отчётность
+- ✅ Сложные temporal queries
+- ❌ Простые CRUD операции без истории
+
+### Bonus: Platform Resolver
+
+**Pattern:** Определение платформы (web/ios/android) из User-Agent
+
+```php
+class PlatformResolver {
+    public function resolve(Request $request): ?Platform {
+        $userAgent = strtolower($request->headers->get('User-Agent', ''));
+        
+        if (str_contains($userAgent, 'ios') || str_contains($userAgent, 'iphone')) {
+            return Platform::IOS;
+        }
+        if (str_contains($userAgent, 'android')) {
+            return Platform::ANDROID;
+        }
+        return Platform::WEB;
+    }
+}
+
+enum Platform: string {
+    case WEB = 'web';
+    case IOS = 'ios';
+    case ANDROID = 'android';
+}
+```
+
+**Usage:** Автоматическая аттрибуция событий к платформе для аналитики
+
+---
+
+**Pattern Source:** Task CQST-010 - DDD Refactoring: UserProgress Domain Events  
+**Documentation:** `memory-bank/reflection/reflection-CQST-010.md`, `memory-bank/archive/archive-CQST-010-20251228.md`  
+**README:** `project/src/UserProgress/Domain/Event/README.md`
 
 ---
 

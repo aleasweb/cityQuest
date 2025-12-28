@@ -1,0 +1,4 @@
+lexik_jwt_authentication:
+    # В тестовой среде токен возвращается в JSON, а не в cookie
+    # Это необходимо для работы тестов
+    remove_token_from_body_when_cookies_used: false

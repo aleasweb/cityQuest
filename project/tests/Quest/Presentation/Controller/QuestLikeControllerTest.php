@@ -93,6 +93,7 @@ class QuestLikeControllerTest extends WebTestCase
         
         // Создаем progress (начинаем квест)
         $progress = new UserQuestProgress($user->getId(), $quest->getId());
+        $progress->start();
         $em->persist($progress);
         $em->flush();
         
@@ -130,6 +131,7 @@ class QuestLikeControllerTest extends WebTestCase
         
         // Создаем progress и лайкаем
         $progress = new UserQuestProgress($user->getId(), $quest->getId());
+        $progress->start();
         $progress->like();
         $em->persist($progress);
         
@@ -198,6 +200,7 @@ class QuestLikeControllerTest extends WebTestCase
         
         // Создаем progress и лайкаем
         $progress = new UserQuestProgress($user->getId(), $quest->getId());
+        $progress->start();
         $progress->like();
         $em->persist($progress);
         $em->flush();
@@ -253,6 +256,7 @@ class QuestLikeControllerTest extends WebTestCase
         
         // Создаем progress (начинаем квест, но не лайкаем)
         $progress = new UserQuestProgress($user->getId(), $quest->getId());
+        $progress->start();
         $em->persist($progress);
         $em->flush();
         

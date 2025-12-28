@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace App\UserProgress\Presentation\Controller;
 
 use App\Quest\Domain\Exception\QuestNotFoundException;
-use App\Shared\Presentation\Trait\AuthenticationTrait;
+use App\Shared\Authentication\Trait\AuthenticationTrait;
 use App\User\Domain\Entity\User;
 use App\UserProgress\Application\Service\UserProgressService;
 use App\UserProgress\Domain\Exception\ActiveQuestExistsException;
 use App\UserProgress\Domain\Exception\InvalidQuestStatusException;
 use App\UserProgress\Domain\Exception\ProgressNotFoundException;
+use App\UserProgress\Domain\ValueObject\QuestStatus;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -22,15 +23,14 @@ use Symfony\Component\Uid\Uuid;
 class UserProgressController extends AbstractController
 {
     use AuthenticationTrait;
+    
     public function __construct(
         private readonly UserProgressService $progressService
     ) {
     }
 
     /**
-     * Get user progress with optional filters
-     * 
-     * GET /api/user/progress?status=active&liked=true
+     * GET /api/user/progress?status=active
      */
     #[Route('', name: 'get', methods: ['GET'])]
     public function getUserProgress(Request $request): JsonResponse
@@ -43,24 +43,15 @@ class UserProgressController extends AbstractController
         $userId = $user->getId();
 
         $status = $request->query->get('status');
-        $liked = $request->query->get('liked');
-        
-        // Convert liked string to bool
-        $likedBool = null;
-        if ($liked === 'true') {
-            $likedBool = true;
-        } elseif ($liked === 'false') {
-            $likedBool = false;
-        }
 
         // Validate status
-        if ($status !== null && !in_array($status, ['active', 'paused', 'completed'], true)) {
+        if ($status !== null && !in_array($status, QuestStatus::getValues())) {
             return $this->json([
                 'error' => 'Invalid status. Must be one of: active, paused, completed'
             ], Response::HTTP_BAD_REQUEST);
         }
 
-        $result = $this->progressService->getUserProgress($userId, $status, $likedBool);
+        $result = $this->progressService->getUserProgress($userId, $status);
 
         return $this->json($result);
     }
@@ -114,7 +105,7 @@ class UserProgressController extends AbstractController
      * PATCH /api/user/progress/{questId}/pause
      */
     #[Route('/{questId}/pause', name: 'pause', methods: ['PATCH'])]
-    public function pauseQuest(string $questId): JsonResponse
+    public function pauseQuest(Request $request, string $questId): JsonResponse
     {
         try {
             $user = $this->getAuthenticatedUserOr401Response();
@@ -157,7 +148,7 @@ class UserProgressController extends AbstractController
      * PATCH /api/user/progress/{questId}/complete
      */
     #[Route('/{questId}/complete', name: 'complete', methods: ['PATCH'])]
-    public function completeQuest(string $questId): JsonResponse
+    public function completeQuest(Request $request, string $questId): JsonResponse
     {
         try {
             $user = $this->getAuthenticatedUserOr401Response();
@@ -200,7 +191,7 @@ class UserProgressController extends AbstractController
      * DELETE /api/user/progress/{questId}
      */
     #[Route('/{questId}', name: 'delete', methods: ['DELETE'])]
-    public function abandonQuest(string $questId): JsonResponse
+    public function abandonQuest(Request $request, string $questId): JsonResponse
     {
         try {
             $user = $this->getAuthenticatedUserOr401Response();
