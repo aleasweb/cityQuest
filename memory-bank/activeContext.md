@@ -4,131 +4,73 @@
 
 ## 🎯 Текущее состояние
 
-**Статус:** 🚀 CQST-010 PLAN COMPLETE → Готов к `/build`  
-**Последняя активность:** 2025-12-26  
-**Текущая задача:** CQST-010 - DDD Refactoring: UserProgress Domain Events & Event Sourcing  
-**Текущая фаза:** 🚀 PLAN COMPLETE → Ready for BUILD mode  
-**Следующий шаг:** `/build` для начала реализации Фазы 1 (Shared Infrastructure)
+**Статус:** 🎯 Готов к новой задаче  
+**Последняя активность:** 2025-12-28  
+**Последняя завершённая задача:** CQST-010 - DDD Refactoring (архивирована)  
+**Следующий шаг:** Используйте `/van` для анализа новой задачи
 
-### ✅ CQST-010: DDD Refactoring - UserProgress Domain Events & Event Sourcing
-
-**ID задачи:** CQST-010  
-**Дата создания:** 2025-12-26  
-**Дата утверждения структуры:** 2025-12-26  
-**Тип:** Level 3-4 - Intermediate to Complex Feature  
-**Статус:** ✅ СТРУКТУРА УТВЕРЖДЕНА → Ready for `/plan`  
-**Текущий этап:** Готов к детальному планированию реализации
-
-**Цели:**
-1. ✅ Создать 6 доменных событий для изменений агрегата UserQuestProgress
-2. ✅ Изменять состояние агрегата внутри агрегата при возникновении событий
-3. ✅ Создать таблицу `domain_events_progress` для хранения всех событий (Event Store)
-4. ✅ Реализовать механизм синхронной записи событий в БД при изменении агрегата
-5. ✅ Добавить отслеживание платформы клиента (web/ios/android) в каждое событие
-
-**Утверждённая структура:**
-
-**1. Shared Event Sourcing Infrastructure:**
-- `DomainEventInterface` - базовый интерфейс в `src/Shared/Domain/Event/`
-- `RecordsEvents` trait - механизм накопления событий для агрегатов
-- `AbstractUserQuestProgressEvent` - базовый класс (implements DomainEventInterface напрямую)
-
-**2. Доменные события (6 типов):**
-- `QuestStartedEvent` - начало нового квеста (event_data: `{}`)
-- `QuestResumedEvent` - возобновление из паузы (event_data: `{}`)
-- `QuestPausedEvent` - постановка на паузу (event_data: `{}`)
-- `QuestCompletedEvent` - завершение квеста (event_data: `{}`)
-- `QuestAbandonedEvent` - отказ от квеста (event_data: `{}`)
-- `QuestStepCheckEvent` - проверка шага (event_data: step_id, coordinates, distance, check_passed)
-
-**3. Event Store (таблица `domain_events_progress`):**
-- Поля: aggregate_id, user_id, quest_id, event_type, event_data (JSONB), platform (JSONB), recorded_at
-- Индексы: 5 (aggregate, user, quest, type, recorded_at)
-- **Важно:** Таблица БЕЗ id (PK) и occurred_at полей
-
-**4. Ключевые архитектурные решения:**
-- ✅ Таблица БД БЕЗ id (PK) и occurred_at полей (только recorded_at)
-- ✅ События НЕ содержат эти поля в классах
-- ✅ 5 из 6 событий имеют пустой event_data: `{}`
-- ✅ Только QuestStepCheckEvent содержит данные (без failure_reason)
-- ✅ Убран промежуточный интерфейс UserQuestProgressDomainEventInterface
-- ✅ AbstractUserQuestProgressEvent implements DomainEventInterface напрямую
-- ✅ Агрегат использует RecordsEvents trait из Shared
-- ✅ DomainEventInterface и RecordsEvents вынесены в src/Shared/
-
-**5. Изменения в агрегате UserQuestProgress:**
-- Использует `RecordsEvents` trait из Shared (recordedEvents[], pull(), apply())
-- Методы `like()` и `unlike()` НЕ генерируют события
-
-**6. Изменения в сервисе UserProgressService:**
-- Добавлен dependency `ProgressEventStoreInterface`
-- Метод `persistEvents()` для синхронного сохранения событий
-- Все public методы принимают параметр `array $platform`
-
-**Принятые решения:**
-- ❌ Version агрегата НЕ хранится
-- ❌ Event Sourcing (восстановление из событий) НЕ реализуется
-- ❌ Event Handlers (side-effects) НЕ реализуются
-- ❌ Saga/Process Manager НЕ нужны
-- ✅ Запись событий **синхронно** (в той же транзакции)
-- ❌ Batch запись и партиционирование НЕ нужны
-
-**Оценка (УТВЕРЖДЕНО):**
-- **Complexity Level:** 3-4 (Intermediate to Complex Feature)
-- **Total Estimated Time:** 9-12 часов
-- **Implementation Approach:** Phased (4 фазы)
-
-**План реализации (4 фазы):**
-
-**ФАЗА 1: Shared Event Sourcing Infrastructure (2-3 часа)**
-- DomainEventInterface + RecordsEvents trait
-- Unit тесты для Shared компонентов
-- Документация
-
-**ФАЗА 2: UserProgress Domain Events (3-4 часа)**
-- AbstractUserQuestProgressEvent базовый класс
-- 6 конкретных событий (QuestStarted, QuestResumed, QuestPaused, QuestCompleted, QuestAbandoned, QuestStepCheck)
-- Unit тесты для событий
-
-**ФАЗА 3: Event Store & Database (2-3 часа)**
-- Миграция БД для таблицы domain_events_progress
-- ProgressEventStoreInterface + DoctrineProgressEventStore
-- Integration тесты Event Store
-
-**ФАЗА 4: Aggregate & Service Updates (2-3 часа)**
-- Обновление UserQuestProgress (RecordsEvents trait + генерация событий)
-- Обновление UserProgressService (сохранение событий)
-- Обновление UserProgressController (platform detection)
-- Integration тесты
-
-**Файлы (19 файлов):**
-- **Новые:** 15 файлов (3 Shared + 8 UserProgress + 2 Infrastructure + 2 Tests)
-- **Модифицированные:** 4 файла (UserQuestProgress, UserProgressService, UserProgressController, services.yaml)
-
-**Риски:**
-- Breaking changes в агрегате (Митигация: default параметры + тестирование)
-- JSONB сериализация (Митигация: try-catch + fallback)
-- Performance (Митигация: синхронная запись acceptable для MVP)
-
-**Критерии успеха:**
-- ✅ 15 новых файлов созданы
-- ✅ 4 файла модифицированы
-- ✅ Миграция применена успешно
-- ✅ 18+ unit/integration тестов проходят
-- ✅ PHPStan Level 5 без ошибок
-- ✅ События корректно сохраняются в БД
-
-**Creative Phase Required:** ❌ НЕТ (все решения утверждены)
-
-**Документация:**
-- Полное описание: `memory-bank/tasks.md` → CQST-010 → ДЕТАЛЬНЫЙ ПЛАН
-- Текущая реализация: `project/src/UserProgress/Domain/Entity/UserQuestProgress.php`
-
-**Следующий шаг:** `/build` для начала реализации Фазы 1
+**Архив последней задачи:** `memory-bank/archive/archive-CQST-010-20251228.md`
 
 ---
 
-### ✅ CQST-009: Client-side Caching ЗААРХИВИРОВАНО
+## 📝 История последних задач
+
+### ✅ CQST-010: DDD Refactoring - UserProgress Domain Events & Event Sourcing
+
+**Дата:** 2025-12-26 → 2025-12-28  
+**Статус:** ✅ COMPLETED & ARCHIVED  
+**Архив:** `archive-CQST-010-20251228.md`  
+**Reflection:** `reflection-CQST-010.md`
+
+**Ключевые достижения:**
+- ✅ Event Sourcing infrastructure (17 новых файлов)
+- ✅ 19 тестов (100% pass rate)
+- ✅ PlatformResolver + Platform Value Object (бонус)
+- ✅ Время: ~10ч (оценка: 9-12ч)
+
+
+---
+
+## 📚 Контекст проекта
+
+**См. детальную информацию в:**
+- `memory-bank/projectbrief.md` - описание проекта
+- `memory-bank/techContext.md` - технический стек
+- `memory-bank/systemPatterns.md` - архитектурные паттерны
+- `memory-bank/style-guide.md` - code style guide
+
+---
+
+## 🔄 Предыдущие задачи (архив)
+
+**CQST-010:** DDD Refactoring - Event Sourcing (см. archive-CQST-010-20251228.md)  
+**CQST-009:** Client-side Caching (см. archive-CQST-009-20251225.md)  
+**CQST-008:** Token Security (см. archive-CQST-008-20251224.md)  
+**CQST-007:** Frontend Integration - 3 фазы (см. archive-CQST-007-phase*.md)  
+**CQST-005, 004, 003, 002, 001:** См. соответствующие архивы
+
+---
+
+## 🚀 Следующие шаги
+
+Используйте `/van` для анализа новой задачи.
+
+---
+
+## 📝 Детальная информация о последней задаче (CQST-010)
+
+**См. полную документацию в архиве:** `memory-bank/archive/archive-CQST-010-20251228.md`
+
+**Краткое резюме:**
+- ✅ Event Sourcing infrastructure (17 новых файлов)
+- ✅ 6 доменных событий + Event Store
+- ✅ 19 тестов (100% pass rate)
+- ✅ PlatformResolver + Platform VO (бонус)
+- ✅ Время: ~10ч (оценка: 9-12ч)
+
+---
+
+### ✅ CQST-009: Client-side Caching
 
 **Тип:** Level 2 - Simple Enhancement  
 **Actual Time:** ~1.5 часа (оценка: 1.5-2ч) ✅

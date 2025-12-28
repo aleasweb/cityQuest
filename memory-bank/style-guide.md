@@ -101,13 +101,49 @@ final class User
 ```
 
 #### Правила
-- Strict types всегда включен
-- Final классы по умолчанию
-- Private properties с readonly где возможно
+- Strict types всегда включен (`declare(strict_types=1)`)
+- Final классы по умолчанию (кроме abstract)
+- Readonly properties где возможно (особенно в events)
 - Constructor property promotion
 - Typed properties и return types обязательны
+- Named arguments для создания objects с >3 параметрами
 - Camel case для методов и свойств
-- Pascal case для классов
+- Pascal case для классов и enums
+- Events наследуют абстрактный базовый класс
+- RecordsEvents trait для entities с событиями
+
+#### Domain Events (CQST-010)
+```php
+// Базовый класс события
+abstract class AbstractUserQuestProgressEvent implements DomainEventInterface {
+    public function __construct(
+        private readonly Uuid $progressId,
+        private readonly Uuid $userId,
+        private readonly Uuid $questId,
+        private readonly \DateTimeImmutable $occurredAt,
+        private readonly ?Platform $platform = null
+    ) {}
+    
+    public function getProgressId(): Uuid { return $this->progressId; }
+    // ... getters
+}
+
+// Конкретное событие
+final class QuestStartedEvent extends AbstractUserQuestProgressEvent {}
+
+// Entity с событиями
+class UserQuestProgress {
+    use RecordsEvents;
+    
+    public function start(): void {
+        $this->status = QuestStatus::Active;
+        $this->recordEvent(new QuestStartedEvent(
+            $this->id, $this->user->getId(), $this->quest->getId(),
+            new \DateTimeImmutable()
+        ));
+    }
+}
+```
 
 #### Комментарии
 ```php
@@ -127,56 +163,65 @@ public function findByEmail(string $email): ?User
 
 #### Стиль
 ```typescript
-// Interfaces для типов
-interface QuestCardProps {
-  id: string;
-  title: string;
-  description: string;
-  city: string;
-  difficulty: 'easy' | 'medium' | 'hard';
-}
+// Types + Zod schemas для валидации
+import { z } from 'zod';
+
+const QuestSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string(),
+  description: z.string().nullable(),
+  city: z.string().nullable(),
+  difficulty: z.enum(['easy', 'medium', 'hard']).nullable(),
+  // ...
+});
+
+type Quest = z.infer<typeof QuestSchema>;
 
 // React компонент
-export const QuestCard: React.FC<QuestCardProps> = ({
-  id,
-  title,
-  description,
-  city,
-  difficulty
-}) => {
+interface QuestCardProps {
+  quest: Quest;
+  onLike?: () => void;
+}
+
+export function QuestCard({ quest, onLike }: QuestCardProps) {
   return (
     <div className="bg-white rounded-lg shadow-md p-4">
-      <h3 className="text-xl font-semibold">{title}</h3>
-      <p className="text-gray-600">{description}</p>
+      <h3 className="text-xl font-semibold">{quest.title}</h3>
+      <p className="text-gray-600">{quest.description}</p>
     </div>
   );
-};
+}
 ```
 
 #### Правила
 - Strict mode enabled
-- Explicit types для функций и переменных
-- PascalCase для компонентов
+- Zod schemas для валидации API responses
+- `z.infer<typeof Schema>` для типов
+- Named exports (не default)
+- Function declarations для компонентов
+- Interface для props
+- PascalCase для компонентов и types
 - camelCase для функций и переменных
 - UPPER_SNAKE_CASE для констант
-- Functional components предпочтительнее классовых
-- Destructuring для props
 
 ### Именование
 
 #### Backend (PHP)
-- **Controllers:** `UserController`, `QuestController`
-- **Services:** `UserRegistrationService`, `QuestSearchService`
-- **Entities:** `User`, `Quest`, `QuestStep`
-- **Repositories:** `UserRepository`, `QuestRepository`
-- **DTOs:** `CreateUserRequest`, `QuestResponse`
+- **Controllers:** `AuthController`, `QuestController`, `UserProgressController`
+- **Services:** `AuthenticationService`, `QuestService`, `UserProgressService`
+- **Entities:** `User`, `Quest`, `UserQuestProgress`
+- **Repositories:** `DoctrineUserRepository`, `DoctrineQuestRepository`
+- **DTOs:** `RegisterUserRequest`, `UpdateProfileRequest`
+- **Events:** `UserWasRegistered`, `QuestStartedEvent`
+- **ValueObjects:** `QuestStatus`, `Platform`
 
 #### Frontend (TypeScript)
-- **Components:** `QuestCard`, `UserProfile`, `MapView`
-- **Hooks:** `useQuests`, `useAuth`, `useGeolocation`
-- **Stores:** `authStore`, `questsStore`
-- **Utils:** `formatDate`, `calculateDistance`
-- **Types:** `Quest`, `User`, `QuestStep`
+- **Components:** `QuestCard`, `Toast`, `ActiveQuestModal`
+- **Pages:** `HomePage`, `QuestDetail`, `UserProfile`
+- **Context:** `AuthContext`
+- **Utils:** `api`, `cacheManager`
+- **Types:** `Quest`, `User`, `UserProgress`, `City`
+- **Schemas:** `QuestSchema`, `UserSchema` (Zod)
 
 ### Структура файлов
 
@@ -204,17 +249,26 @@ User/
         └── UserController.php
 ```
 
-#### Frontend
+#### Frontend (актуальная структура)
 ```
-components/
-├── QuestCard/
-│   ├── QuestCard.tsx
-│   ├── QuestCard.test.tsx
-│   └── index.ts
-├── UserProfile/
-│   ├── UserProfile.tsx
-│   ├── UserProfile.test.tsx
-│   └── index.ts
+src/
+├── react-app/
+│   ├── components/
+│   │   ├── Toast.tsx              # Notifications (success/error)
+│   │   ├── ActiveQuestModal.tsx   # 409 Conflict modal
+│   │   └── QuestCard.tsx          # Reusable quest card
+│   ├── pages/
+│   │   ├── HomePage.tsx           # Quest list + filters
+│   │   ├── QuestDetail.tsx        # Quest details + actions
+│   │   └── UserProfile.tsx        # User progress history
+│   ├── context/
+│   │   └── AuthContext.tsx        # JWT auth state
+│   └── routes.tsx                 # React Router config
+├── shared/
+│   ├── api.ts                     # HTTP client (JWT cookies)
+│   ├── cacheManager.ts            # LocalStorage cache
+│   └── types.ts                   # TypeScript types + Zod
+└── index.css                      # Tailwind styles
 ```
 
 ## 📝 Документация
@@ -232,4 +286,5 @@ components/
 
 ---
 
-**Последнее обновление:** 2025-10-25
+**Последнее обновление:** 2025-12-28  
+**Версия:** 1.1
