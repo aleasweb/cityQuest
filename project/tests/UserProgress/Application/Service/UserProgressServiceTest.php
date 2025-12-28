@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\UserProgress\Application\Service;
 
+use App\Platform\Application\Service\PlatformResolver;
 use App\Platform\ValueObject\Platform;
 use App\Quest\Domain\Entity\Quest;
 use App\Quest\Domain\Exception\QuestNotFoundException;
@@ -22,16 +23,25 @@ class UserProgressServiceTest extends TestCase
     private UserQuestProgressRepositoryInterface $progressRepository;
     private QuestRepositoryInterface $questRepository;
     private ProgressEventStoreInterface $eventStore;
+    private PlatformResolver $platformResolver;
     private UserProgressService $service;
-    private Platform $platform;
 
     protected function setUp(): void
     {
         $this->progressRepository = $this->createMock(UserQuestProgressRepositoryInterface::class);
         $this->questRepository = $this->createMock(QuestRepositoryInterface::class);
         $this->eventStore = $this->createMock(ProgressEventStoreInterface::class);
-        $this->service = new UserProgressService($this->progressRepository, $this->questRepository, $this->eventStore);
-        $this->platform = Platform::web('Chrome', '120.0.0', 'macOS');
+        $this->platformResolver = $this->createMock(PlatformResolver::class);
+        
+        $platform = Platform::web('Chrome', '120.0.0', 'macOS');
+        $this->platformResolver->method('resolve')->willReturn($platform);
+        
+        $this->service = new UserProgressService(
+            $this->progressRepository,
+            $this->questRepository,
+            $this->eventStore,
+            $this->platformResolver
+        );
     }
 
     public function testStartQuestCreatesNewProgress(): void
@@ -46,7 +56,7 @@ class UserProgressServiceTest extends TestCase
         
         $this->progressRepository->expects($this->once())->method('save');
 
-        $result = $this->service->startQuest($userId, $questId, $this->platform);
+        $result = $this->service->startQuest($userId, $questId);
 
         $this->assertInstanceOf(UserQuestProgress::class, $result);
         $this->assertTrue($result->getStatus()->isActive());
@@ -61,7 +71,7 @@ class UserProgressServiceTest extends TestCase
 
         $this->expectException(QuestNotFoundException::class);
 
-        $this->service->startQuest($userId, $questId, $this->platform);
+        $this->service->startQuest($userId, $questId);
     }
 
     public function testStartQuestThrowsExceptionWhenActiveQuestExists(): void
@@ -77,7 +87,7 @@ class UserProgressServiceTest extends TestCase
 
         $this->expectException(ActiveQuestExistsException::class);
 
-        $this->service->startQuest($userId, $questId, $this->platform);
+        $this->service->startQuest($userId, $questId);
     }
 
     public function testStartQuestResumesFromPaused(): void
@@ -86,8 +96,8 @@ class UserProgressServiceTest extends TestCase
         $questId = Uuid::v4();
         $quest = new Quest('Test Quest');
         $pausedProgress = new UserQuestProgress($userId, $questId);
-        $pausedProgress->start($this->platform);
-        $pausedProgress->pause($this->platform);
+        $pausedProgress->start();
+        $pausedProgress->pause();
 
         $this->questRepository->method('findById')->willReturn($quest);
         $this->progressRepository->method('findActiveByUserId')->willReturn(null);
@@ -95,7 +105,7 @@ class UserProgressServiceTest extends TestCase
         
         $this->progressRepository->expects($this->once())->method('save');
 
-        $result = $this->service->startQuest($userId, $questId, $this->platform);
+        $result = $this->service->startQuest($userId, $questId);
 
         $this->assertTrue($result->getStatus()->isActive());
     }
@@ -105,11 +115,12 @@ class UserProgressServiceTest extends TestCase
         $userId = Uuid::v4();
         $questId = Uuid::v4();
         $activeProgress = new UserQuestProgress($userId, $questId);
+        $activeProgress->start();
 
         $this->progressRepository->method('findByUserIdAndQuestId')->willReturn($activeProgress);
         $this->progressRepository->expects($this->once())->method('save');
 
-        $result = $this->service->pauseQuest($userId, $questId, $this->platform);
+        $result = $this->service->pauseQuest($userId, $questId);
 
         $this->assertTrue($result->getStatus()->isPaused());
     }
@@ -123,7 +134,7 @@ class UserProgressServiceTest extends TestCase
 
         $this->expectException(ProgressNotFoundException::class);
 
-        $this->service->pauseQuest($userId, $questId, $this->platform);
+        $this->service->pauseQuest($userId, $questId);
     }
 
     public function testCompleteQuestChangesStatusToCompleted(): void
@@ -131,11 +142,12 @@ class UserProgressServiceTest extends TestCase
         $userId = Uuid::v4();
         $questId = Uuid::v4();
         $activeProgress = new UserQuestProgress($userId, $questId);
+        $activeProgress->start();
 
         $this->progressRepository->method('findByUserIdAndQuestId')->willReturn($activeProgress);
         $this->progressRepository->expects($this->once())->method('save');
 
-        $result = $this->service->completeQuest($userId, $questId, $this->platform);
+        $result = $this->service->completeQuest($userId, $questId);
 
         $this->assertTrue($result->getStatus()->isCompleted());
         $this->assertNotNull($result->getCompletedAt());
@@ -150,7 +162,7 @@ class UserProgressServiceTest extends TestCase
 
         $this->expectException(ProgressNotFoundException::class);
 
-        $this->service->completeQuest($userId, $questId, $this->platform);
+        $this->service->completeQuest($userId, $questId);
     }
 
     public function testGetUserProgressReturnsFormattedData(): void
@@ -158,9 +170,10 @@ class UserProgressServiceTest extends TestCase
         $userId = Uuid::v4();
         $questId = Uuid::v4();
         $progress = new UserQuestProgress($userId, $questId);
+        $progress->start();
         $quest = new Quest('Test Quest');
 
-        $this->progressRepository->method('findByUserIdWithFilters')->willReturn([$progress]);
+        $this->progressRepository->method('findByUserIdAndStatus')->willReturn([$progress]);
         $this->progressRepository->method('findByUserId')->willReturn([$progress]);
         $this->questRepository->method('findById')->willReturn($quest);
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\UserProgress\Domain\Entity;
 
+use App\Shared\Domain\Event\DomainEventInterface;
 use App\Shared\Domain\Event\RecordsEvents;
 use App\UserProgress\Domain\Event\AbstractUserQuestProgressEvent;
 use App\UserProgress\Domain\Event\QuestAbandonedEvent;
@@ -221,8 +222,13 @@ class UserQuestProgress
         return $this->isLiked;
     }
 
-    protected function mutate(AbstractUserQuestProgressEvent $event): void
+    protected function mutate(DomainEventInterface $event): void
     {
+        // Обрабатываем только события UserQuestProgress
+        if (!$event instanceof AbstractUserQuestProgressEvent) {
+            return;
+        }
+        
         $now = new DateTimeImmutable();
         $this->updatedAt = $now;
 

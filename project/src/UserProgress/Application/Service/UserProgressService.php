@@ -112,7 +112,7 @@ class UserProgressService
      */
     public function getUserProgress(Uuid $userId, ?string $status = null): array
     {
-        $progressRecords = $this->progressRepository->findByUserIdWithFilters($userId, $status);
+        $progressRecords = $this->progressRepository->findByUserIdAndStatus($userId, $status);
 
         // Build response with quest details
         $data = [];
