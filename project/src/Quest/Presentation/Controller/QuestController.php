@@ -6,10 +6,11 @@ namespace App\Quest\Presentation\Controller;
 
 use App\Quest\Application\Service\QuestService;
 use App\Quest\Application\Service\QuestListService;
+use App\Quest\Application\Service\QuestLikeService;
 use App\Quest\Domain\Exception\QuestNotFoundException;
+use App\Quest\Domain\Repository\QuestRepositoryInterface;
 use App\User\Domain\Entity\User;
 use App\User\Domain\Repository\UserRepositoryInterface;
-use App\UserProgress\Application\Service\QuestLikeService;
 use App\UserProgress\Domain\Exception\QuestNotStartedException;
 use App\UserProgress\Domain\Repository\UserQuestProgressRepositoryInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -25,6 +26,7 @@ class QuestController extends AbstractController
         private QuestService $questService,
         private QuestLikeService $questLikeService,
         private QuestListService $questListService,
+        private QuestRepositoryInterface $questRepository,
         private UserRepositoryInterface $userRepository,
         private UserQuestProgressRepositoryInterface $progressRepository,
     ) {
@@ -60,6 +62,22 @@ class QuestController extends AbstractController
 
         try {
             $result = $this->questListService->getQuests($filters, $sortField, $sortDirection, $limit, $offset);
+
+            // Получаем текущего пользователя для проверки лайков
+            $securityUser = $this->getUser();
+            $likedMap = [];
+            if ($securityUser) {
+                $user = $this->userRepository->findByUsername($securityUser->getUserIdentifier());
+                if ($user) {
+                    // Собираем все quest_id для batch-запроса
+                    $questIds = array_map(
+                        fn($quest) => \Symfony\Component\Uid\Uuid::fromString($quest['id']),
+                        $result['data']
+                    );
+                    // Один запрос для всех квестов
+                    $likedMap = $this->questLikeService->getLikedStatusMap($user->getId(), $questIds);
+                }
+            }
             
             // Получаем маппинг городов и преобразуем названия
             $cities = $this->getParameter('app.cities');
@@ -67,6 +85,9 @@ class QuestController extends AbstractController
                 if (isset($quest['city']) && isset($cities[$quest['city']])) {
                     $quest['city'] = $cities[$quest['city']];
                 }
+                
+                // Добавляем isLikedByCurrentUser из предварительно загруженного map
+                $quest['isLikedByCurrentUser'] = $likedMap[$quest['id']] ?? false;
             }
             
             return $this->json($result);
@@ -107,12 +128,31 @@ class QuestController extends AbstractController
             
             $result = $this->questListService->getNearbyQuests($lat, $lng, $radius, $limit);
             
+            // Получаем текущего пользователя для проверки лайков
+            $securityUser = $this->getUser();
+            $likedMap = [];
+            if ($securityUser) {
+                $user = $this->userRepository->findByUsername($securityUser->getUserIdentifier());
+                if ($user) {
+                    // Собираем все quest_id для batch-запроса
+                    $questIds = array_map(
+                        fn($quest) => \Symfony\Component\Uid\Uuid::fromString($quest['id']),
+                        $result['data']
+                    );
+                    // Один запрос для всех квестов
+                    $likedMap = $this->questLikeService->getLikedStatusMap($user->getId(), $questIds);
+                }
+            }
+            
             // Получаем маппинг городов и преобразуем названия
             $cities = $this->getParameter('app.cities');
             foreach ($result['data'] as &$quest) {
                 if (isset($quest['city']) && isset($cities[$quest['city']])) {
                     $quest['city'] = $cities[$quest['city']];
                 }
+                
+                // Добавляем isLikedByCurrentUser из предварительно загруженного map
+                $quest['isLikedByCurrentUser'] = $likedMap[$quest['id']] ?? false;
             }
             
             return $this->json($result);
@@ -163,7 +203,7 @@ class QuestController extends AbstractController
                 if ($user) {
                     $progress = $this->progressRepository->findByUserIdAndQuestId($user->getId(), $questId);
                     $quest['isStartedByCurrentUser'] = $progress !== null;
-                    $quest['isLikedByCurrentUser'] = $progress?->isLiked() ?? false;
+                    $quest['isLikedByCurrentUser'] = $this->questLikeService->isLiked($user->getId(), $questId);
                     $quest['questStatus'] = $progress?->getStatus()->value ?? null;
                 } else {
                     $quest['isStartedByCurrentUser'] = false;
@@ -226,6 +266,18 @@ class QuestController extends AbstractController
                 );
             }
 
+            // Сначала проверяем существование квеста
+            $quest = $this->questRepository->findById($questId);
+            if (!$quest) {
+                throw QuestNotFoundException::withId($questId);
+            }
+
+            // Затем проверяем что квест есть в прогрессе пользователя (в любом статусе: active, paused, completed)
+            $progress = $this->progressRepository->findByUserIdAndQuestId($user->getId(), $questId);
+            if (!$progress) {
+                throw QuestNotStartedException::forQuest($questId);
+            }
+
             $result = $this->questLikeService->toggleLike($user->getId(), $questId);
 
             return $this->json([
@@ -239,7 +291,7 @@ class QuestController extends AbstractController
             );
         } catch (QuestNotStartedException $e) {
             return $this->json(
-                ['error' => 'Quest must be started before it can be liked'],
+                ['error' => 'Quest must be in progress to be liked'],
                 Response::HTTP_FORBIDDEN
             );
         } catch (\Exception $e) {

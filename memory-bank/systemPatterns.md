@@ -24,10 +24,13 @@ src/
 │   │   └── EventSubscriber/# JWTAuthenticationSubscriber
 │   └── Presentation/        # Интерфейсы
 │       └── Controller/     # AuthController, ProfileController
-├── Quest/                    # Домен квестов
-│   ├── Domain/              # Quest, QuestRepositoryInterface
-│   ├── Application/         # QuestService, QuestListService
-│   ├── Infrastructure/      # DoctrineQuestRepository
+├── Quest/                    # Домен квестов (CQST-011)
+│   ├── Domain/              
+│   │   ├── Entity/         # Quest, QuestLike
+│   │   ├── Repository/     # QuestRepositoryInterface, QuestLikeRepositoryInterface
+│   │   └── Exception/      # QuestNotFoundException
+│   ├── Application/         # QuestService, QuestListService, QuestLikeService
+│   ├── Infrastructure/      # DoctrineQuestRepository, DoctrineQuestLikeRepository
 │   └── Presentation/        # QuestController
 ├── UserProgress/            # Домен прогресса (CQST-010)
 │   ├── Domain/              
@@ -35,7 +38,7 @@ src/
 │   │   ├── Event/          # 6 domain events + RecordsEvents trait
 │   │   ├── Repository/     # 2 interfaces (Progress + EventStore)
 │   │   └── ValueObject/    # QuestStatus
-│   ├── Application/         # UserProgressService, QuestLikeService
+│   ├── Application/         # UserProgressService
 │   ├── Infrastructure/      
 │   │   └── Db/             # Doctrine repos + EventStore (DBAL)
 │   └── Presentation/        # UserProgressController
@@ -1179,4 +1182,85 @@ DatabaseTestTrait игнорирует несуществующие таблиц
 **Pattern Sources:**
 - Task CQST-005 (Post-completion refactoring)
 - Documentation: `memory-bank/reflection/reflection-CQST-005-refactoring.md`
+
+---
+
+## 🎯 Quest Likes - Dedicated Table Pattern
+
+**Context:** CQST-011 - Refactoring системы лайков с улучшением UX и масштабируемости
+
+### Проблема
+Лайки хранились в `user_quest_progress.is_liked`:
+- ❌ Можно лайкнуть только начатый квест (плохой UX)
+- ❌ Нет временных меток (аналитика ограничена)
+- ❌ Денормализованный счётчик `likes_count` не синхронизирован
+- ❌ Нет истории лайков
+
+### Решение: Dedicated Table
+Создана отдельная таблица `quest_likes`:
+
+```sql
+CREATE TABLE quest_likes (
+    id UUID PRIMARY KEY,
+    user_id UUID NOT NULL,
+    quest_id UUID NOT NULL,
+    created_at TIMESTAMP NOT NULL,
+    CONSTRAINT unique_user_quest_like UNIQUE (user_id, quest_id)
+);
+```
+
+### Структура
+```
+src/Quest/
+├── Domain/
+│   ├── Entity/
+│   │   ├── Quest.php                  # Существующий
+│   │   └── QuestLike.php             # НОВЫЙ - immutable entity
+│   └── Repository/
+│       ├── QuestRepositoryInterface.php
+│       └── QuestLikeRepositoryInterface.php  # НОВЫЙ
+├── Application/
+│   └── Service/
+│       └── QuestLikeService.php      # Перемещён из UserProgress
+└── Infrastructure/
+    └── Db/
+        └── DoctrineQuestLikeRepository.php  # НОВЫЙ
+```
+
+### Преимущества
+1. **UX:** Лайк без старта квеста
+2. **Аналитика:** `created_at` для временных метрик
+3. **Масштабируемость:** Отдельная таблица с индексами
+4. **Гибкость:** Без FK для быстрых операций
+5. **Audit Trail:** Полная история лайков
+
+### Индексы
+```sql
+CREATE INDEX idx_quest_likes_user ON quest_likes(user_id);       -- "Мои лайки"
+CREATE INDEX idx_quest_likes_quest ON quest_likes(quest_id);     -- "Лайки квеста"
+CREATE INDEX idx_quest_likes_created_at ON quest_likes(created_at); -- Аналитика
+```
+
+### API
+```php
+// Endpoint: POST /api/quests/{id}/like
+QuestLikeService::toggleLike(userId, questId): [
+    'liked' => bool,
+    'likesCount' => int
+]
+```
+
+### Тесты
+- **Unit:** 6 тестов для QuestLikeService (mocks)
+- **Integration:** 4 теста для QuestController (DB)
+- **Coverage:** 100% для нового кода
+
+### Миграция
+- Создание `quest_likes` без миграции существующих данных
+- `likes_count` остаётся в `quests` как денормализованное поле
+- Пересчитывается в runtime при toggle like
+
+**Pattern Source:**
+- Task: CQST-011
+- Documentation: `memory-bank/archive/archive-CQST-011-*.md`
 

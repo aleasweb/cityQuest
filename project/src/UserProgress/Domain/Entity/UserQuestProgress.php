@@ -38,9 +38,6 @@ class UserQuestProgress
     #[ORM\Column(type: 'string', length: 20, options: ['default' => 'active'])]
     private string $status;
 
-    #[ORM\Column(type: 'boolean', options: ['default' => false])]
-    private bool $isLiked = false;
-
     #[ORM\Column(type: 'datetime_immutable', nullable: true)]
     private ?\DateTimeImmutable $completedAt = null;
 
@@ -78,11 +75,6 @@ class UserQuestProgress
     public function getStatus(): QuestStatus
     {
         return QuestStatus::from($this->status);
-    }
-
-    public function isLiked(): bool
-    {
-        return $this->isLiked;
     }
 
     public function getCompletedAt(): ?DateTimeImmutable
@@ -201,26 +193,6 @@ class UserQuestProgress
         ));
     }
 
-    public function like(): void
-    {
-        $this->isLiked = true;
-        $this->updatedAt = new \DateTimeImmutable();
-    }
-
-    public function unlike(): void
-    {
-        $this->isLiked = false;
-        $this->updatedAt = new \DateTimeImmutable();
-    }
-
-    public function toggleLike(): bool
-    {
-        $this->isLiked = !$this->isLiked;
-        $this->updatedAt = new \DateTimeImmutable();
-        
-        return $this->isLiked;
-    }
-
     protected function mutate(DomainEventInterface $event): void
     {
         // Обрабатываем только события UserQuestProgress
@@ -262,7 +234,6 @@ class UserQuestProgress
             'userId' => (string) $this->userId,
             'questId' => (string) $this->questId,
             'status' => $this->status,
-            'isLiked' => $this->isLiked,
             'completedAt' => $this->completedAt?->format('Y-m-d H:i:s'),
             'createdAt' => $this->createdAt->format('Y-m-d H:i:s'),
             'updatedAt' => $this->updatedAt->format('Y-m-d H:i:s'),

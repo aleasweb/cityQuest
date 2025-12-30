@@ -177,7 +177,7 @@ export const api = {
   
   /**
    * Получить прогресс пользователя
-   * GET /user/progress?status=active&liked=true
+   * GET /user/progress?status=active
    */
   getUserProgress: async (params?: {
     status?: 'active' | 'paused' | 'completed';

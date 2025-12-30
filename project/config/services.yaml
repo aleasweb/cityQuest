@@ -43,6 +43,10 @@ services:
     App\Quest\Domain\Repository\QuestRepositoryInterface:
         class: App\Quest\Infrastructure\Db\DoctrineQuestRepository
     
+    # QuestLike Repository binding
+    App\Quest\Domain\Repository\QuestLikeRepositoryInterface:
+        class: App\Quest\Infrastructure\Db\DoctrineQuestLikeRepository
+    
     # UserProgress Repository binding
     App\UserProgress\Domain\Repository\UserQuestProgressRepositoryInterface:
         class: App\UserProgress\Infrastructure\Db\DoctrineUserQuestProgressRepository

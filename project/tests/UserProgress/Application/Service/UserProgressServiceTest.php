@@ -6,8 +6,10 @@ namespace App\Tests\UserProgress\Application\Service;
 
 use App\Platform\Application\Service\PlatformResolver;
 use App\Platform\ValueObject\Platform;
+use App\Quest\Application\Service\QuestLikeService;
 use App\Quest\Domain\Entity\Quest;
 use App\Quest\Domain\Exception\QuestNotFoundException;
+use App\Quest\Domain\Repository\QuestLikeRepositoryInterface;
 use App\Quest\Domain\Repository\QuestRepositoryInterface;
 use App\UserProgress\Application\Service\UserProgressService;
 use App\UserProgress\Domain\Entity\UserQuestProgress;
@@ -24,6 +26,8 @@ class UserProgressServiceTest extends TestCase
     private QuestRepositoryInterface $questRepository;
     private ProgressEventStoreInterface $eventStore;
     private PlatformResolver $platformResolver;
+    private QuestLikeService $questLikeService;
+    private QuestLikeRepositoryInterface $likeRepository;
     private UserProgressService $service;
 
     protected function setUp(): void
@@ -33,6 +37,10 @@ class UserProgressServiceTest extends TestCase
         $this->eventStore = $this->createMock(ProgressEventStoreInterface::class);
         $this->platformResolver = $this->createMock(PlatformResolver::class);
         
+        // Create QuestLikeService with mocked dependencies (final class workaround)
+        $this->likeRepository = $this->createMock(QuestLikeRepositoryInterface::class);
+        $this->questLikeService = new QuestLikeService($this->likeRepository, $this->questRepository);
+        
         $platform = Platform::web('Chrome', '120.0.0', 'macOS');
         $this->platformResolver->method('resolve')->willReturn($platform);
         
@@ -40,7 +48,8 @@ class UserProgressServiceTest extends TestCase
             $this->progressRepository,
             $this->questRepository,
             $this->eventStore,
-            $this->platformResolver
+            $this->platformResolver,
+            $this->questLikeService
         );
     }
 
@@ -176,6 +185,16 @@ class UserProgressServiceTest extends TestCase
         $this->progressRepository->method('findByUserIdAndStatus')->willReturn([$progress]);
         $this->progressRepository->method('findByUserId')->willReturn([$progress]);
         $this->questRepository->method('findById')->willReturn($quest);
+        
+        // Mock batch method getLikedStatusMap (оптимизация N+1)
+        $this->likeRepository->method('findLikedQuestIds')
+            ->with($userId, [$questId])
+            ->willReturn([]);
+        
+        // Mock getLikedQuests for meta.liked count
+        $this->likeRepository->method('findByUser')
+            ->with($userId)
+            ->willReturn([]);
 
         $result = $this->service->getUserProgress($userId);
 
@@ -184,5 +203,8 @@ class UserProgressServiceTest extends TestCase
         $this->assertCount(1, $result['data']);
         $this->assertEquals(1, $result['meta']['total']);
         $this->assertEquals(1, $result['meta']['in_progress']);
+        $this->assertEquals(0, $result['meta']['liked']);
+        $this->assertArrayHasKey('isLiked', $result['data'][0]);
+        $this->assertFalse($result['data'][0]['isLiked']);
     }
 }

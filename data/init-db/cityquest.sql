@@ -57,7 +57,6 @@ CREATE TABLE IF NOT EXISTS user_quest_progress (
     user_id UUID NOT NULL,
     quest_id UUID NOT NULL,
     status VARCHAR(20) DEFAULT 'active' NOT NULL,
-    is_liked BOOLEAN DEFAULT FALSE NOT NULL,
     completed_at TIMESTAMP(0) WITHOUT TIME ZONE,
     created_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL,
     updated_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL,
@@ -77,7 +76,25 @@ COMMENT ON COLUMN user_quest_progress.updated_at IS '(DC2Type:datetime_immutable
 -- Индексы для user_quest_progress
 CREATE INDEX IF NOT EXISTS idx_user_status ON user_quest_progress(user_id, status);
 CREATE INDEX IF NOT EXISTS idx_quest ON user_quest_progress(quest_id);
-CREATE INDEX IF NOT EXISTS idx_user_liked ON user_quest_progress(user_id, is_liked);
+
+-- Таблица лайков квестов
+CREATE TABLE IF NOT EXISTS quest_likes (
+    id UUID PRIMARY KEY,
+    user_id UUID NOT NULL,
+    quest_id UUID NOT NULL,
+    created_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL,
+    CONSTRAINT unique_user_quest_like UNIQUE (user_id, quest_id)
+);
+
+COMMENT ON COLUMN quest_likes.id IS '(DC2Type:uuid)';
+COMMENT ON COLUMN quest_likes.user_id IS '(DC2Type:uuid)';
+COMMENT ON COLUMN quest_likes.quest_id IS '(DC2Type:uuid)';
+COMMENT ON COLUMN quest_likes.created_at IS '(DC2Type:datetime_immutable)';
+
+-- Индексы для quest_likes
+CREATE INDEX IF NOT EXISTS idx_quest_likes_user ON quest_likes(user_id);
+CREATE INDEX IF NOT EXISTS idx_quest_likes_quest ON quest_likes(quest_id);
+CREATE INDEX IF NOT EXISTS idx_quest_likes_created_at ON quest_likes(created_at);
 
 
 INSERT INTO quests (
