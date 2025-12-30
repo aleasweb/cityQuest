@@ -48,7 +48,7 @@ class QuestLikeControllerTest extends WebTestCase
         $this->assertResponseStatusCodeSame(401);
     }
 
-    public function testToggleLikeSuccessfullyLikesQuestWithoutStarting(): void
+    public function testToggleLikeFailsForQuestNotInProgress(): void
     {
         $client = $this->createClientWithDatabase();
         $em = $this->getEntityManager($client);
@@ -61,7 +61,7 @@ class QuestLikeControllerTest extends WebTestCase
         // Создаем квест
         $quest = TestObjectFactory::createQuestWithDefaults($em, 'Test Quest');
         
-        // Лайкаем квест БЕЗ старта (новое поведение)
+        // Пытаемся лайкнуть квест БЕЗ добавления в прогресс - должна быть ошибка
         $client->request(
             'POST',
             '/api/quests/' . $quest->getId() . '/like',
@@ -70,12 +70,11 @@ class QuestLikeControllerTest extends WebTestCase
             TestAuthClient::createAuthHeaders($token)
         );
         
-        $this->assertResponseIsSuccessful();
+        $this->assertResponseStatusCodeSame(403);
         
         $response = json_decode($client->getResponse()->getContent(), true);
-        $this->assertArrayHasKey('data', $response);
-        $this->assertTrue($response['data']['liked']);
-        $this->assertEquals(1, $response['data']['likesCount']);
+        $this->assertArrayHasKey('error', $response);
+        $this->assertEquals('Quest must be in progress to be liked', $response['error']);
     }
 
     public function testToggleLikeSuccessfullyLikesQuest(): void
@@ -92,7 +91,17 @@ class QuestLikeControllerTest extends WebTestCase
         $quest = TestObjectFactory::createQuestWithDefaults($em, 'Test Quest');
         $initialLikesCount = $quest->getLikesCount();
         
-        // Лайкаем квест (БЕЗ старта)
+        // Сначала начинаем квест
+        $client->request(
+            'POST',
+            '/api/user/progress/' . $quest->getId() . '/start',
+            [],
+            [],
+            TestAuthClient::createAuthHeaders($token)
+        );
+        $this->assertResponseStatusCodeSame(201);
+        
+        // Затем лайкаем квест
         $client->request(
             'POST',
             '/api/quests/' . $quest->getId() . '/like',
@@ -124,7 +133,17 @@ class QuestLikeControllerTest extends WebTestCase
         // Создаем квест
         $quest = TestObjectFactory::createQuestWithDefaults($em, 'Test Quest');
         
-        // Сначала лайкаем квест
+        // Начинаем квест
+        $client->request(
+            'POST',
+            '/api/user/progress/' . $quest->getId() . '/start',
+            [],
+            [],
+            TestAuthClient::createAuthHeaders($token)
+        );
+        $this->assertResponseStatusCodeSame(201);
+        
+        // Лайкаем квест
         $client->request(
             'POST',
             '/api/quests/' . $quest->getId() . '/like',
@@ -308,7 +327,17 @@ class QuestLikeControllerTest extends WebTestCase
         
         $this->assertEquals(0, $initialLikesCount, 'Initial likes count should be 0');
         
-        // Шаг 2: Делаем лайк
+        // Шаг 2: Начинаем квест (обязательно перед лайком)
+        $client->request(
+            'POST',
+            '/api/user/progress/' . $quest->getId() . '/start',
+            [],
+            [],
+            TestAuthClient::createAuthHeaders($token)
+        );
+        $this->assertResponseStatusCodeSame(201);
+        
+        // Шаг 3: Делаем лайк
         $client->request(
             'POST',
             '/api/quests/' . $quest->getId() . '/like',
@@ -318,7 +347,7 @@ class QuestLikeControllerTest extends WebTestCase
         );
         $this->assertResponseIsSuccessful();
         
-        // Шаг 3: Получаем квест снова и проверяем что количество увеличилось на 1
+        // Шаг 4: Получаем квест снова и проверяем что количество увеличилось на 1
         $client->request('GET', '/api/quests/' . $quest->getId());
         $this->assertResponseIsSuccessful();
         
@@ -331,6 +360,114 @@ class QuestLikeControllerTest extends WebTestCase
             'Likes count should increase by 1 after liking'
         );
         $this->assertEquals(1, $newLikesCount, 'New likes count should be exactly 1');
+    }
+
+    public function testToggleLikeWorksForPausedQuest(): void
+    {
+        $client = $this->createClientWithDatabase();
+        $em = $this->getEntityManager($client);
+        $passwordHasher = static::getContainer()->get('security.user_password_hasher');
+        
+        $user = TestObjectFactory::createUserWithHasher($em, $passwordHasher, 'testuser');
+        $token = TestAuthClient::getJwtToken($client, 'testuser');
+        
+        $quest = TestObjectFactory::createQuest(
+            entityManager: $em,
+            title: 'Paused Quest Test',
+            description: 'Test quest',
+            city: 'Moscow',
+            difficulty: 'easy',
+            likesCount: 0
+        );
+        
+        // Начинаем квест
+        $client->request(
+            'POST',
+            '/api/user/progress/' . $quest->getId() . '/start',
+            [],
+            [],
+            TestAuthClient::createAuthHeaders($token)
+        );
+        $this->assertResponseStatusCodeSame(201);
+        
+        // Ставим на паузу
+        $client->request(
+            'PATCH',
+            '/api/user/progress/' . $quest->getId() . '/pause',
+            [],
+            [],
+            TestAuthClient::createAuthHeaders($token)
+        );
+        $this->assertResponseIsSuccessful();
+        
+        // Лайкаем квест в статусе paused
+        $client->request(
+            'POST',
+            '/api/quests/' . $quest->getId() . '/like',
+            [],
+            [],
+            TestAuthClient::createAuthHeaders($token)
+        );
+        
+        $this->assertResponseIsSuccessful();
+        
+        $response = json_decode($client->getResponse()->getContent(), true);
+        $this->assertTrue($response['data']['liked']);
+        $this->assertEquals(1, $response['data']['likesCount']);
+    }
+
+    public function testToggleLikeWorksForCompletedQuest(): void
+    {
+        $client = $this->createClientWithDatabase();
+        $em = $this->getEntityManager($client);
+        $passwordHasher = static::getContainer()->get('security.user_password_hasher');
+        
+        $user = TestObjectFactory::createUserWithHasher($em, $passwordHasher, 'testuser');
+        $token = TestAuthClient::getJwtToken($client, 'testuser');
+        
+        $quest = TestObjectFactory::createQuest(
+            entityManager: $em,
+            title: 'Completed Quest Test',
+            description: 'Test quest',
+            city: 'Moscow',
+            difficulty: 'easy',
+            likesCount: 0
+        );
+        
+        // Начинаем квест
+        $client->request(
+            'POST',
+            '/api/user/progress/' . $quest->getId() . '/start',
+            [],
+            [],
+            TestAuthClient::createAuthHeaders($token)
+        );
+        $this->assertResponseStatusCodeSame(201);
+        
+        // Завершаем квест
+        $client->request(
+            'PATCH',
+            '/api/user/progress/' . $quest->getId() . '/complete',
+            [],
+            [],
+            TestAuthClient::createAuthHeaders($token)
+        );
+        $this->assertResponseIsSuccessful();
+        
+        // Лайкаем завершенный квест
+        $client->request(
+            'POST',
+            '/api/quests/' . $quest->getId() . '/like',
+            [],
+            [],
+            TestAuthClient::createAuthHeaders($token)
+        );
+        
+        $this->assertResponseIsSuccessful();
+        
+        $response = json_decode($client->getResponse()->getContent(), true);
+        $this->assertTrue($response['data']['liked']);
+        $this->assertEquals(1, $response['data']['likesCount']);
     }
 }
 

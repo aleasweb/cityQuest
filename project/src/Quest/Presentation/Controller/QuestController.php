@@ -8,8 +8,10 @@ use App\Quest\Application\Service\QuestService;
 use App\Quest\Application\Service\QuestListService;
 use App\Quest\Application\Service\QuestLikeService;
 use App\Quest\Domain\Exception\QuestNotFoundException;
+use App\Quest\Domain\Repository\QuestRepositoryInterface;
 use App\User\Domain\Entity\User;
 use App\User\Domain\Repository\UserRepositoryInterface;
+use App\UserProgress\Domain\Exception\QuestNotStartedException;
 use App\UserProgress\Domain\Repository\UserQuestProgressRepositoryInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -24,6 +26,7 @@ class QuestController extends AbstractController
         private QuestService $questService,
         private QuestLikeService $questLikeService,
         private QuestListService $questListService,
+        private QuestRepositoryInterface $questRepository,
         private UserRepositoryInterface $userRepository,
         private UserQuestProgressRepositoryInterface $progressRepository,
     ) {
@@ -263,6 +266,18 @@ class QuestController extends AbstractController
                 );
             }
 
+            // Сначала проверяем существование квеста
+            $quest = $this->questRepository->findById($questId);
+            if (!$quest) {
+                throw QuestNotFoundException::withId($questId);
+            }
+
+            // Затем проверяем что квест есть в прогрессе пользователя (в любом статусе: active, paused, completed)
+            $progress = $this->progressRepository->findByUserIdAndQuestId($user->getId(), $questId);
+            if (!$progress) {
+                throw QuestNotStartedException::forQuest($questId);
+            }
+
             $result = $this->questLikeService->toggleLike($user->getId(), $questId);
 
             return $this->json([
@@ -273,6 +288,11 @@ class QuestController extends AbstractController
             return $this->json(
                 ['error' => 'Quest not found'],
                 Response::HTTP_NOT_FOUND
+            );
+        } catch (QuestNotStartedException $e) {
+            return $this->json(
+                ['error' => 'Quest must be in progress to be liked'],
+                Response::HTTP_FORBIDDEN
             );
         } catch (\Exception $e) {
             return $this->json(
