@@ -4,17 +4,44 @@
 
 ## 🎯 Текущее состояние
 
-**Статус:** ✅ BUILD COMPLETED → `/reflect`  
-**Последняя активность:** 2025-12-28  
-**Текущая задача:** CQST-011 - Likes System Refactoring (Dedicated Table)  
-**Следующий шаг:** Используйте `/reflect` для финальной рефлексии и архивации
+**Статус:** 🎯 Готов к новой задаче (`/van` mode)  
+**Последняя активность:** 2025-12-30  
+**Последняя завершённая задача:** CQST-011 - Likes System Refactoring (Dedicated Table)  
+**Следующий шаг:** Используйте `/van` для анализа новой задачи
 
-**Последняя завершённая:** CQST-010 - DDD Refactoring (архивирована)  
+**Архив CQST-011:** `memory-bank/archive/archive-CQST-011-20251230.md`  
+**Reflection CQST-011:** `memory-bank/reflection/reflection-CQST-011.md`
+
+**Предыдущая завершённая:** CQST-010 - DDD Refactoring (архивирована)  
 **Архив:** `memory-bank/archive/archive-CQST-010-20251228.md`
 
 ---
 
 ## 📝 История последних задач
+
+### ✅ CQST-011: Likes System Refactoring - Dedicated Table
+
+**Дата:** 2025-12-28 → 2025-12-30  
+**Статус:** ✅ COMPLETED & ARCHIVED  
+**Архив:** `archive-CQST-011-20251230.md`  
+**Reflection:** `reflection-CQST-011.md`
+
+**Ключевые достижения:**
+- ✅ Dedicated table `quest_likes` с FK constraints CASCADE
+- ✅ QuestLike entity + Repository в Quest domain
+- ✅ N+1 query optimization: `getLikedStatusMap()` batch query
+- ✅ 129 тестов (100% pass rate, +11 integration tests)
+- ✅ Бизнес-правило: лайк для квестов в прогрессе (active/paused/completed)
+- ✅ Meta.liked счетчик + denormalized counter
+- ✅ Время: ~3.5ч (оценка: 2.5-3ч, +17% из-за scope расширения)
+
+**Key Insights:**
+- 💡 Final classes в DDD services: real instance + mocked dependencies
+- 💡 Batch queries критичны для performance
+- 💡 Denormalization с DQL оптимальна для счетчиков
+- 💡 Business rules в backend (403) + frontend (UI)
+
+---
 
 ### ✅ CQST-010: DDD Refactoring - UserProgress Domain Events & Event Sourcing
 
@@ -54,11 +81,12 @@
 
 ## 🚀 Следующие шаги
 
-**Текущая задача:** CQST-011 - Likes System Refactoring  
-**Статус:** PLAN COMPLETE (Updated: без Events, без миграции данных)  
-**Следующий шаг:** `/build` для реализации
+**Текущее состояние:** 🎯 Готов к новой задаче  
+**Статус:** Все задачи завершены и заархивированы  
+**Следующий шаг:** `/van` для инициализации новой задачи
 
-**План:** См. `memory-bank/tasks.md` - упрощённый 6-фазный план (~2.5-3ч)
+**Последняя завершённая:** CQST-011 - Likes System Refactoring  
+**Архив:** `memory-bank/archive/archive-CQST-011-20251230.md`
 
 ---
 

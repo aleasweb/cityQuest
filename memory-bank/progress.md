@@ -4,19 +4,22 @@
 
 ## 📊 Общий прогресс
 
-### 🏗️ CQST-011 BUILD COMPLETED (2025-12-28)
+### ✅ CQST-011 ARCHIVED (2025-12-30)
 
 **Задача:** Likes System Refactoring - Dedicated Table  
-**Статус:** ✅ BUILD COMPLETED → `/reflect`  
-**Тип:** Level 2 - Simple Enhancement
+**Статус:** ✅ COMPLETED & ARCHIVED  
+**Тип:** Level 2 - Simple Enhancement  
+**Архив:** `memory-bank/archive/archive-CQST-011-20251230.md`
 
 **Ключевые достижения:**
 - ✅ Dedicated table `quest_likes` с FK constraints
 - ✅ QuestLike entity + Repository (Domain)
 - ✅ QuestLikeService перемещён в Quest domain
 - ✅ Миграция применена (dev + test БД)
-- ✅ 125 тестов (100% pass rate, +6 новых unit тестов)
-- ✅ UX улучшен: лайк БЕЗ старта квеста
+- ✅ 129 тестов (100% pass rate, +11 новых integration тестов)
+- ✅ Бизнес-правило: лайк только для квестов в прогрессе (active/paused/completed)
+- ✅ N+1 query optimization в UserProgressService
+- ✅ Meta.liked счетчик добавлен
 - ✅ Документация обновлена (systemPatterns + techContext)
 
 **Файлы:**
@@ -24,7 +27,16 @@
 - 6 обновлённых: Controller, Services config, Tests, init-db.sql
 - 1 удалённый: старый QuestLikeService из UserProgress
 
-**Следующий шаг:** `/reflect` для рефлексии и архивации
+**Reflection Highlights:**
+- 💡 Final classes в DDD services: real instance + mocked dependencies
+- 💡 Batch queries критичны для performance (N+1 elimination)
+- 💡 Denormalization с DQL оптимальна для счетчиков
+- 💡 Business rules нужны в backend (403) и frontend (UI)
+- ⏱️ Time: ~3.5ч (оценка: 2.5-3ч, +17% variance из-за scope расширения)
+
+**Рефлексия:** `memory-bank/reflection/reflection-CQST-011.md`
+
+**Следующий шаг:** `/archive` для финализации документации
 
 ---
 
@@ -261,6 +273,36 @@
 **📋 CQST-011 PLAN READY** - Likes System Refactoring (Dedicated Table) | Ready for `/build`
 
 ## 📅 Недавние обновления
+- **2025-12-30:** 📦 **CQST-011 ЗААРХИВИРОВАНО** - Likes System Refactoring (Dedicated Table)
+  - ✅ Создан comprehensive архивный документ: `memory-bank/archive/archive-CQST-011-20251230.md`
+  - 📊 Comprehensive documentation сохранена (implementation + reflection + archive)
+  - 🎯 Status: COMPLETED & ARCHIVED ✅
+  - 🎯 Next: Ready for new task (`/van` mode)
+- **2025-12-30:** 📝 **CQST-011 РЕФЛЕКСИЯ ЗАВЕРШЕНА** - Likes System Refactoring (Dedicated Table)
+  - ✅ Создан reflection document: `memory-bank/reflection/reflection-CQST-011.md`
+  - 📊 Метрики: 129 tests (100% pass), 13 файлов (6 новых + 6 изменений + 1 удаление)
+  - ⏱️ Время: ~3.5ч (оценка: 2.5-3ч, +17% variance из-за scope расширения)
+  - 💡 Ключевые инсайты:
+    - Final classes в DDD services: real instance + mocked dependencies решение
+    - Batch queries критичны для performance (N+1 elimination в UserProgressService)
+    - Denormalization с DQL оптимальна для счетчиков (incrementLikesCount/decrementLikesCount)
+    - Business rules нужны в 2 местах: backend (403 error) + frontend (UI disabled state)
+  - ✅ Что прошло хорошо:
+    - Чистая DDD архитектура (QuestLike в Quest domain)
+    - Database integrity (FK constraints CASCADE + UNIQUE)
+    - N+1 query optimization (getLikedStatusMap batch query)
+    - Comprehensive testing (11 integration tests для всех edge cases)
+    - Denormalized counter (DQL UPDATE для likesCount)
+  - ⚠️ Вызовы:
+    - Изменение бизнес-требований в процессе ("лайк БЕЗ старта" → "лайк для квестов в прогрессе")
+    - Mocking final class QuestLikeService (решено через real instance)
+    - Консистентность тестов после изменения бизнес-правила
+  - 🔜 Action Items:
+    - Remove deprecated user_quest_progress.is_liked column
+    - Analytics queries: getLikesCountByPeriod()
+    - Popular quests recalculation cronjob
+    - Endpoint: GET /api/user/liked-quests
+  - 🎯 Status: REFLECTION COMPLETE → Ready for `/archive`
 - **2025-12-28:** 📋 **CQST-011 PLAN FINALIZED** - Likes System Refactoring (Dedicated Table)
   - ✅ Финальный упрощённый план: 6 фаз, ~2.5-3 часа (было 7 фаз, 3.5-4ч)
   - 🎯 Level 2 - Simple Enhancement (максимально упрощено)
