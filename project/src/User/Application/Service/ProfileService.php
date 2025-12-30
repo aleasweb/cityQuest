@@ -117,7 +117,6 @@ final class ProfileService
                 'city' => $quest?->getCity(),
             ],
             'status' => $progress->getStatus()->value,
-            'isLiked' => $progress->isLiked(),
             'startedAt' => $progress->getCreatedAt()->format('Y-m-d H:i:s'),
             'completedAt' => $progress->getCompletedAt()?->format('Y-m-d H:i:s'),
         ];

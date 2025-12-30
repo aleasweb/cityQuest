@@ -48,7 +48,7 @@ class QuestLikeControllerTest extends WebTestCase
         $this->assertResponseStatusCodeSame(401);
     }
 
-    public function testToggleLikeThrowsForbiddenWhenQuestNotStarted(): void
+    public function testToggleLikeSuccessfullyLikesQuestWithoutStarting(): void
     {
         $client = $this->createClientWithDatabase();
         $em = $this->getEntityManager($client);
@@ -61,7 +61,7 @@ class QuestLikeControllerTest extends WebTestCase
         // Создаем квест
         $quest = TestObjectFactory::createQuestWithDefaults($em, 'Test Quest');
         
-        // Попытка лайкнуть квест, который не начат
+        // Лайкаем квест БЕЗ старта (новое поведение)
         $client->request(
             'POST',
             '/api/quests/' . $quest->getId() . '/like',
@@ -70,14 +70,15 @@ class QuestLikeControllerTest extends WebTestCase
             TestAuthClient::createAuthHeaders($token)
         );
         
-        $this->assertResponseStatusCodeSame(403);
+        $this->assertResponseIsSuccessful();
         
         $response = json_decode($client->getResponse()->getContent(), true);
-        $this->assertArrayHasKey('error', $response);
-        $this->assertEquals('Quest must be started before it can be liked', $response['error']);
+        $this->assertArrayHasKey('data', $response);
+        $this->assertTrue($response['data']['liked']);
+        $this->assertEquals(1, $response['data']['likesCount']);
     }
 
-    public function testToggleLikeSuccessfullyLikesStartedQuest(): void
+    public function testToggleLikeSuccessfullyLikesQuest(): void
     {
         $client = $this->createClientWithDatabase();
         $em = $this->getEntityManager($client);
@@ -91,13 +92,7 @@ class QuestLikeControllerTest extends WebTestCase
         $quest = TestObjectFactory::createQuestWithDefaults($em, 'Test Quest');
         $initialLikesCount = $quest->getLikesCount();
         
-        // Создаем progress (начинаем квест)
-        $progress = new UserQuestProgress($user->getId(), $quest->getId());
-        $progress->start();
-        $em->persist($progress);
-        $em->flush();
-        
-        // Лайкаем квест
+        // Лайкаем квест (БЕЗ старта)
         $client->request(
             'POST',
             '/api/quests/' . $quest->getId() . '/like',
@@ -113,7 +108,7 @@ class QuestLikeControllerTest extends WebTestCase
         $this->assertEquals('Quest liked', $response['message']);
         $this->assertArrayHasKey('data', $response);
         $this->assertTrue($response['data']['liked']);
-        $this->assertEquals($initialLikesCount + 1, $response['data']['likesCount']);
+        $this->assertEquals(1, $response['data']['likesCount']);
     }
 
     public function testToggleLikeUnlikesAlreadyLikedQuest(): void
@@ -129,19 +124,17 @@ class QuestLikeControllerTest extends WebTestCase
         // Создаем квест
         $quest = TestObjectFactory::createQuestWithDefaults($em, 'Test Quest');
         
-        // Создаем progress и лайкаем
-        $progress = new UserQuestProgress($user->getId(), $quest->getId());
-        $progress->start();
-        $progress->like();
-        $em->persist($progress);
+        // Сначала лайкаем квест
+        $client->request(
+            'POST',
+            '/api/quests/' . $quest->getId() . '/like',
+            [],
+            [],
+            TestAuthClient::createAuthHeaders($token)
+        );
+        $this->assertResponseIsSuccessful();
         
-        // Увеличиваем счетчик лайков
-        $quest->setLikesCount($quest->getLikesCount() + 1);
-        $em->flush();
-        
-        $currentLikesCount = $quest->getLikesCount();
-        
-        // Убираем лайк
+        // Затем убираем лайк
         $client->request(
             'POST',
             '/api/quests/' . $quest->getId() . '/like',
@@ -155,7 +148,7 @@ class QuestLikeControllerTest extends WebTestCase
         $response = json_decode($client->getResponse()->getContent(), true);
         $this->assertEquals('Quest unliked', $response['message']);
         $this->assertFalse($response['data']['liked']);
-        $this->assertEquals($currentLikesCount - 1, $response['data']['likesCount']);
+        $this->assertEquals(0, $response['data']['likesCount']);
     }
 
     public function testToggleLikeReturnsNotFoundForNonExistentQuest(): void
@@ -198,12 +191,21 @@ class QuestLikeControllerTest extends WebTestCase
         // Создаем квест
         $quest = TestObjectFactory::createQuestWithDefaults($em, 'Test Quest');
         
-        // Создаем progress и лайкаем
+        // Создаем progress (начинаем квест)
         $progress = new UserQuestProgress($user->getId(), $quest->getId());
         $progress->start();
-        $progress->like();
         $em->persist($progress);
         $em->flush();
+        
+        // Лайкаем квест через API
+        $client->request(
+            'POST',
+            '/api/quests/' . $quest->getId() . '/like',
+            [],
+            [],
+            TestAuthClient::createAuthHeaders($token)
+        );
+        $this->assertResponseIsSuccessful();
         
         // Получаем квест
         $client->request(
@@ -275,6 +277,60 @@ class QuestLikeControllerTest extends WebTestCase
         $this->assertArrayHasKey('data', $response);
         $this->assertTrue($response['data']['isStartedByCurrentUser']);
         $this->assertFalse($response['data']['isLikedByCurrentUser']);
+    }
+
+    public function testLikeIncreasesCountByOne(): void
+    {
+        $client = $this->createClientWithDatabase();
+        $em = $this->getEntityManager($client);
+        $passwordHasher = static::getContainer()->get('security.user_password_hasher');
+        
+        // Создаем пользователя и получаем токен
+        $user = TestObjectFactory::createUserWithHasher($em, $passwordHasher, 'testuser');
+        $token = TestAuthClient::getJwtToken($client, 'testuser');
+        
+        // Создаем квест с 0 лайков
+        $quest = TestObjectFactory::createQuest(
+            entityManager: $em,
+            title: 'Test Quest for Like Count',
+            description: 'Testing like count increment',
+            city: 'Moscow',
+            difficulty: 'easy',
+            likesCount: 0
+        );
+        
+        // Шаг 1: Получаем квест и сохраняем текущее количество лайков
+        $client->request('GET', '/api/quests/' . $quest->getId());
+        $this->assertResponseIsSuccessful();
+        
+        $initialResponse = json_decode($client->getResponse()->getContent(), true);
+        $initialLikesCount = $initialResponse['data']['likesCount'];
+        
+        $this->assertEquals(0, $initialLikesCount, 'Initial likes count should be 0');
+        
+        // Шаг 2: Делаем лайк
+        $client->request(
+            'POST',
+            '/api/quests/' . $quest->getId() . '/like',
+            [],
+            [],
+            TestAuthClient::createAuthHeaders($token)
+        );
+        $this->assertResponseIsSuccessful();
+        
+        // Шаг 3: Получаем квест снова и проверяем что количество увеличилось на 1
+        $client->request('GET', '/api/quests/' . $quest->getId());
+        $this->assertResponseIsSuccessful();
+        
+        $newResponse = json_decode($client->getResponse()->getContent(), true);
+        $newLikesCount = $newResponse['data']['likesCount'];
+        
+        $this->assertEquals(
+            $initialLikesCount + 1,
+            $newLikesCount,
+            'Likes count should increase by 1 after liking'
+        );
+        $this->assertEquals(1, $newLikesCount, 'New likes count should be exactly 1');
     }
 }
 

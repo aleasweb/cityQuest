@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\UserProgress\Application\Service;
 
 use App\Platform\Application\Service\PlatformResolver;
+use App\Quest\Application\Service\QuestLikeService;
 use App\Quest\Domain\Exception\QuestNotFoundException;
 use App\Quest\Domain\Repository\QuestRepositoryInterface;
 use App\UserProgress\Domain\Entity\UserQuestProgress;
@@ -21,7 +22,8 @@ class UserProgressService
         private readonly UserQuestProgressRepositoryInterface $progressRepository,
         private readonly QuestRepositoryInterface $questRepository,
         private readonly ProgressEventStoreInterface $eventStore,
-        private readonly PlatformResolver $platformResolver
+        private readonly PlatformResolver $platformResolver,
+        private readonly QuestLikeService $questLikeService
     ) {
     }
 
@@ -114,18 +116,25 @@ class UserProgressService
     {
         $progressRecords = $this->progressRepository->findByUserIdAndStatus($userId, $status);
 
+        // Собираем все quest IDs для batch-запроса лайков
+        $questIds = array_map(fn($progress) => $progress->getQuestId(), $progressRecords);
+        
+        // Один запрос для всех квестов
+        $likedMap = $this->questLikeService->getLikedStatusMap($userId, $questIds);
+
         // Build response with quest details
         $data = [];
         foreach ($progressRecords as $progress) {
             $quest = $this->questRepository->findById($progress->getQuestId());
+            $questIdString = $progress->getQuestId()->toRfc4122();
             
             $progressData = [
-                'questId' => (string) $progress->getQuestId(),
+                'questId' => $questIdString,
                 'status' => $progress->getStatus()->value,
-                'isLiked' => $progress->isLiked(),
                 'completedAt' => $progress->getCompletedAt()?->format('Y-m-d H:i:s'),
                 'startedAt' => $progress->getCreatedAt()->format('Y-m-d H:i:s'),
                 'updatedAt' => $progress->getUpdatedAt()->format('Y-m-d H:i:s'),
+                'isLiked' => $likedMap[$questIdString] ?? false,
             ];
 
             // Include quest details if quest exists
@@ -138,12 +147,14 @@ class UserProgressService
 
         // Calculate metadata
         $allProgress = $this->progressRepository->findByUserId($userId);
+        $likedQuests = $this->questLikeService->getLikedQuests($userId);
+        
         $meta = [
             'total' => count($allProgress),
             'completed' => count(array_filter($allProgress, fn($p) => $p->getStatus()->isCompleted())),
             'in_progress' => count(array_filter($allProgress, fn($p) => $p->getStatus()->isActive())),
             'paused' => count(array_filter($allProgress, fn($p) => $p->getStatus()->isPaused())),
-            'liked' => count(array_filter($allProgress, fn($p) => $p->isLiked())),
+            'liked' => count($likedQuests),
         ];
 
         return [

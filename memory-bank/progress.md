@@ -4,6 +4,30 @@
 
 ## 📊 Общий прогресс
 
+### 🏗️ CQST-011 BUILD COMPLETED (2025-12-28)
+
+**Задача:** Likes System Refactoring - Dedicated Table  
+**Статус:** ✅ BUILD COMPLETED → `/reflect`  
+**Тип:** Level 2 - Simple Enhancement
+
+**Ключевые достижения:**
+- ✅ Dedicated table `quest_likes` с FK constraints
+- ✅ QuestLike entity + Repository (Domain)
+- ✅ QuestLikeService перемещён в Quest domain
+- ✅ Миграция применена (dev + test БД)
+- ✅ 125 тестов (100% pass rate, +6 новых unit тестов)
+- ✅ UX улучшен: лайк БЕЗ старта квеста
+- ✅ Документация обновлена (systemPatterns + techContext)
+
+**Файлы:**
+- 6 новых: Entity, Repository Interface/Impl, Service, Migration, Tests
+- 6 обновлённых: Controller, Services config, Tests, init-db.sql
+- 1 удалённый: старый QuestLikeService из UserProgress
+
+**Следующий шаг:** `/reflect` для рефлексии и архивации
+
+---
+
 ### ✅ CQST-010 ARCHIVED (2025-12-28)
 
 **Задача:** DDD Refactoring - UserProgress Domain Events & Event Sourcing  
@@ -234,9 +258,18 @@
 - **Активных задач:** 0 (готов к новой задаче)
 
 ## 🎯 Текущий фокус
-**✅ CQST-009 ЗААРХИВИРОВАНО** - Client-side Caching | Готов к новой задаче
+**📋 CQST-011 PLAN READY** - Likes System Refactoring (Dedicated Table) | Ready for `/build`
 
 ## 📅 Недавние обновления
+- **2025-12-28:** 📋 **CQST-011 PLAN FINALIZED** - Likes System Refactoring (Dedicated Table)
+  - ✅ Финальный упрощённый план: 6 фаз, ~2.5-3 часа (было 7 фаз, 3.5-4ч)
+  - 🎯 Level 2 - Simple Enhancement (максимально упрощено)
+  - 📊 Scope: 13 файлов (6 новых + 6 изменений + 1 удаление)
+  - 🎯 Цель: Dedicated table quest_likes, убрать ограничение "лайк только для начатых квестов"
+  - ✅ UX улучшение, масштабируемость, аналитика, data integrity
+  - ❌ Убраны Domain Events для упрощения
+  - ❌ Убрана миграция существующих данных (чистая реализация)
+  - 🎯 Status: PLAN COMPLETE → Ready for `/build`
 - **2025-12-28:** 📝 **CQST-010 РЕФЛЕКСИЯ ЗАВЕРШЕНА** - DDD Refactoring: UserProgress Domain Events
   - ✅ Создан comprehensive reflection document: `memory-bank/reflection/reflection-CQST-010.md`
   - 📊 Задокументированы метрики: 17 файлов, 19 тестов, ~10ч реализации

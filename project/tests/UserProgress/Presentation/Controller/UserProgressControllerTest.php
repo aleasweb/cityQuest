@@ -241,4 +241,96 @@ class UserProgressControllerTest extends WebTestCase
         $client->request('PATCH', '/api/user/progress/' . $quest->getId() . '/complete');
         $this->assertResponseStatusCodeSame(401);
     }
+
+    public function testGetUserProgressReturnsIsLikedStatus(): void
+    {
+        $client = static::createClient();
+        
+        $passwordHasher = static::getContainer()->get('security.user_password_hasher');
+        $user = TestObjectFactory::createUserWithHasher(
+            $this->getEntityManager($client),
+            $passwordHasher,
+            'liked_test_user'
+        );
+        
+        $quest1 = TestObjectFactory::createQuest(
+            $this->getEntityManager($client), 
+            'Liked Quest',
+            description: 'This quest is liked',
+            city: 'Test City',
+            difficulty: 'medium',
+            likesCount: 0
+        );
+        
+        $quest2 = TestObjectFactory::createQuest(
+            $this->getEntityManager($client), 
+            'Not Liked Quest',
+            description: 'This quest is not liked',
+            city: 'Test City',
+            difficulty: 'easy',
+            likesCount: 0
+        );
+        
+        $token = TestAuthClient::getJwtToken($client, 'liked_test_user');
+        
+        // Start both quests
+        $client->request('POST', '/api/user/progress/' . $quest1->getId() . '/start', [], [], 
+            TestAuthClient::createAuthHeaders($token)
+        );
+        $this->assertResponseStatusCodeSame(201);
+        
+        // Complete first quest to allow starting second
+        $client->request('PATCH', '/api/user/progress/' . $quest1->getId() . '/complete', [], [], 
+            TestAuthClient::createAuthHeaders($token)
+        );
+        
+        $client->request('POST', '/api/user/progress/' . $quest2->getId() . '/start', [], [], 
+            TestAuthClient::createAuthHeaders($token)
+        );
+        $this->assertResponseStatusCodeSame(201);
+        
+        // Like only first quest
+        $client->request('POST', '/api/quests/' . $quest1->getId() . '/like', [], [], 
+            TestAuthClient::createAuthHeaders($token)
+        );
+        $this->assertResponseIsSuccessful();
+        
+        // Get user progress
+        $client->request('GET', '/api/user/progress', [], [], 
+            TestAuthClient::createAuthHeaders($token)
+        );
+        
+        $this->assertResponseIsSuccessful();
+        
+        $response = json_decode($client->getResponse()->getContent(), true);
+        $this->assertArrayHasKey('data', $response);
+        $this->assertCount(2, $response['data']);
+        
+        // Find quest1 and quest2 in response
+        $quest1Data = null;
+        $quest2Data = null;
+        foreach ($response['data'] as $progressItem) {
+            if ($progressItem['questId'] === (string) $quest1->getId()) {
+                $quest1Data = $progressItem;
+            }
+            if ($progressItem['questId'] === (string) $quest2->getId()) {
+                $quest2Data = $progressItem;
+            }
+        }
+        
+        $this->assertNotNull($quest1Data, 'Quest 1 should be in progress data');
+        $this->assertNotNull($quest2Data, 'Quest 2 should be in progress data');
+        
+        // Verify isLiked field exists and is correct
+        $this->assertArrayHasKey('isLiked', $quest1Data);
+        $this->assertArrayHasKey('isLiked', $quest2Data);
+        
+        $this->assertTrue($quest1Data['isLiked'], 'Quest 1 should be liked');
+        $this->assertFalse($quest2Data['isLiked'], 'Quest 2 should not be liked');
+        
+        // Verify meta.liked contains total liked quests count
+        $this->assertArrayHasKey('meta', $response);
+        $this->assertArrayHasKey('liked', $response['meta']);
+        $this->assertEquals(1, $response['meta']['liked'], 'User should have 1 liked quest in total');
+    }
 }

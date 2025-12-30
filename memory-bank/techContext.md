@@ -605,6 +605,26 @@ created_at    TIMESTAMP       -- когда событие записано в �
 - `idx_platform` - для аналитики по платформам
 - `idx_created_at` - для audit trail
 
+**Table:** `quest_likes` (CQST-011)
+```sql
+id            UUID            -- Primary key
+user_id       UUID            -- Ссылка на users(id)
+quest_id      UUID            -- Ссылка на quests(id)
+created_at    TIMESTAMP       -- когда лайк был создан
+```
+
+**Constraints:**
+- `UNIQUE (user_id, quest_id)` - один лайк на квест от пользователя
+- **Примечание:** Foreign Keys намеренно отсутствуют для гибкости
+
+**Индексы (3):**
+- `idx_quest_likes_user` - для запросов "мои лайки"
+- `idx_quest_likes_quest` - для подсчёта лайков квеста
+- `idx_quest_likes_created_at` - для временной аналитики
+
+**Связь с denormalized field:**
+- `quests.likes_count` - денормализованный счётчик, пересчитывается в runtime
+
 #### 5. Integration with Service Layer
 
 **UserProgressService** обновлён:
