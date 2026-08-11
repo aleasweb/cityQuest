@@ -51,6 +51,9 @@ class Quest
     #[ORM\Column(type: 'float', nullable: true)]
     private ?float $longitude = null;
 
+    #[ORM\Column(type: 'string', length: 20, options: ['default' => 'linear'])]
+    private string $type = 'linear';
+
     #[ORM\Column(type: 'datetime_immutable')]
     private \DateTimeImmutable $createdAt;
 
@@ -196,6 +199,17 @@ class Quest
         $this->updatedAt = new \DateTimeImmutable();
     }
 
+    public function getType(): string
+    {
+        return $this->type;
+    }
+
+    public function setType(string $type): void
+    {
+        $this->type = $type;
+        $this->updatedAt = new \DateTimeImmutable();
+    }
+
     public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
@@ -227,6 +241,7 @@ class Quest
             'isPopular' => $this->isPopular,
             'latitude' => $this->latitude,
             'longitude' => $this->longitude,
+            'type' => $this->type,
             'createdAt' => $this->createdAt->format('Y-m-d H:i:s'),
             'updatedAt' => $this->updatedAt->format('Y-m-d H:i:s'),
         ];

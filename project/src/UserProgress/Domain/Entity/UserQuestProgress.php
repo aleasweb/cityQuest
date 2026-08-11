@@ -41,6 +41,9 @@ class UserQuestProgress
     #[ORM\Column(type: 'datetime_immutable', nullable: true)]
     private ?\DateTimeImmutable $completedAt = null;
 
+    #[ORM\Column(type: 'integer', nullable: true)]
+    private ?int $currentStepNumber = null;
+
     #[ORM\Column(type: 'datetime_immutable')]
     private \DateTimeImmutable $createdAt;
 
@@ -90,6 +93,17 @@ class UserQuestProgress
     public function getUpdatedAt(): DateTimeImmutable
     {
         return $this->updatedAt;
+    }
+
+    public function getCurrentStepNumber(): ?int
+    {
+        return $this->currentStepNumber;
+    }
+
+    public function setCurrentStepNumber(?int $stepNumber): void
+    {
+        $this->currentStepNumber = $stepNumber;
+        $this->updatedAt = new DateTimeImmutable();
     }
 
     public function start(): void
@@ -193,6 +207,26 @@ class UserQuestProgress
         ));
     }
 
+    public function check(): void
+    {
+        $this->apply(new QuestStepCheckEvent(
+            $this->id,
+            $this->userId,
+            $this->questId
+        ));
+/*
+ * Uuid $aggregateId,
+        Uuid $userId,
+        Uuid $questId,
+        \DateTimeImmutable $occurredAt,
+        Platform $platform,
+        private float $clientLatitude,
+        private float $clientLongitude,
+        private float $distanceToPoint,
+        private bool $checkPassed
+ */
+    }
+
     protected function mutate(DomainEventInterface $event): void
     {
         // Обрабатываем только события UserQuestProgress
@@ -234,6 +268,7 @@ class UserQuestProgress
             'userId' => (string) $this->userId,
             'questId' => (string) $this->questId,
             'status' => $this->status,
+            'currentStepNumber' => $this->currentStepNumber,
             'completedAt' => $this->completedAt?->format('Y-m-d H:i:s'),
             'createdAt' => $this->createdAt->format('Y-m-d H:i:s'),
             'updatedAt' => $this->updatedAt->format('Y-m-d H:i:s'),

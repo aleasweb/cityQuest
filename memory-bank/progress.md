@@ -4,6 +4,27 @@
 
 ## 📊 Общий прогресс
 
+### 📦 CQST-012 ARCHIVED (2026-08-11)
+
+**Задача:** Quest Steps (Чекпоинты) - Система шагов для квестов  
+**Статус:** ✅ COMPLETED & ARCHIVED  
+**Тип:** Level 3 - Intermediate Feature  
+**Архив:** `memory-bank/archive/archive-CQST-012.md`
+
+**Ключевые достижения:**
+- ✅ Созданы `QuestStep` сущности с DDD архитектурой.
+- ✅ Геолокация (`GeolocationService`) перенесена в независимый модуль `Shared/Geo`.
+- ✅ Отслеживание `current_step_number` в `UserQuestProgress` без дополнительных таблиц.
+- ✅ Добавлена интеграция с Event Sourcing: генерация события `QuestStepCheckEvent` при каждом чекпоинте.
+- ✅ Модифицированы `startQuest` и реализована функция `checkQuestStep` с авто-комплитом по завершению всех шагов.
+- ✅ Разработаны и протестированы новые API эндпоинты (GET `/steps/` и POST `/check`).
+
+**Рефлексия:** `memory-bank/reflection/reflection-CQST-012.md`
+
+**Следующий шаг:** Используйте `/van` для выбора новой задачи
+
+---
+
 ### ✅ CQST-011 ARCHIVED (2025-12-30)
 
 **Задача:** Likes System Refactoring - Dedicated Table  
@@ -60,6 +81,7 @@
 ### ✅ Предыдущие завершённые задачи
 
 **См. архивы в `memory-bank/archive/`:**
+- CQST-012: Quest Steps Implementation (archive-CQST-012.md)
 - CQST-010: DDD Refactoring (archive-CQST-010-20251228.md)
 - CQST-009: Client-side Caching (archive-CQST-009-20251225.md)
 - CQST-008: Token Security (archive-CQST-008-20251224.md)
@@ -264,15 +286,22 @@
 - **Готовность Backend API:** 35%
 - **Готовность Frontend:** 70% (React + Auth + API + User Progress + Quest Management + Security + Performance Optimization)
 - **Готовность Mobile:** 0%
-- **Завершенных и заархивированных задач:** 10 основных задач + 1 рефакторинг
-  - Основные: CQST-001, CQST-002, CQST-003, CQST-004, CQST-005, CQST-007 (3 фазы), CQST-008 (2 фазы), CQST-009
+- **Завершенных и заархивированных задач:** 11 основных задач + 1 рефакторинг
+  - Основные: CQST-001, CQST-002, CQST-003, CQST-004, CQST-005, CQST-007 (3 фазы), CQST-008 (2 фазы), CQST-009, CQST-012
   - Рефакторинг: Test Infrastructure
 - **Активных задач:** 0 (готов к новой задаче)
 
 ## 🎯 Текущий фокус
-**📋 CQST-011 PLAN READY** - Likes System Refactoring (Dedicated Table) | Ready for `/build`
+Нет активной задачи. Ожидание команды `/van` для выбора следующей цели.
 
 ## 📅 Недавние обновления
+- **2026-08-11:** 📦 **CQST-012 ЗААРХИВИРОВАНО** - Quest Steps Implementation
+  - ✅ Создан архивный документ: `memory-bank/archive/archive-CQST-012.md`
+  - 🎯 Status: COMPLETED & ARCHIVED ✅
+  - 🎯 Next: Ready for new task (`/van` mode)
+- **2026-08-11:** 📝 **CQST-012 РЕФЛЕКСИЯ ЗАВЕРШЕНА** - Quest Steps Implementation
+  - ✅ Создан reflection document: `memory-bank/reflection/reflection-CQST-012.md`
+  - 🎯 Status: REFLECTION COMPLETE → Ready for `/archive`
 - **2025-12-30:** 📦 **CQST-011 ЗААРХИВИРОВАНО** - Likes System Refactoring (Dedicated Table)
   - ✅ Создан comprehensive архивный документ: `memory-bank/archive/archive-CQST-011-20251230.md`
   - 📊 Comprehensive documentation сохранена (implementation + reflection + archive)

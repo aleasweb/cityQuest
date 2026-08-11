@@ -1,6 +1,7 @@
 // Phase 2: Removed jwt-decode import - no longer decode JWT on client
 // JWT is in HttpOnly cookie and user data comes from backend
-import type { Quest, QuestFilters, UserProgress, RegisterData, LoginData, AuthResponse, User, City, UserProfileWithHistory } from './types';
+import type { Quest, QuestFilters, UserProgress, RegisterData, LoginData, AuthResponse, User, City, UserProfileWithHistory, QuestStep, QuestStepCheckBody, QuestStepCheckResultData } from './types';
+import { QuestStepSchema } from './types';
 import { cache } from './cacheManager';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
@@ -112,6 +113,17 @@ export const api = {
     
     const response = await apiRequest<ApiResponse<Quest[]>>(`/quests/nearby?${params}`);
     return response.data || [];
+  },
+
+  /**
+   * Шаг квеста (чекпоинт)
+   * GET /quests/{questId}/steps/{stepNumber}
+   */
+  getQuestStep: async (questId: string, stepNumber: number): Promise<QuestStep> => {
+    const response = await apiRequest<{ data: QuestStep }>(
+      `/quests/${questId}/steps/${stepNumber}`
+    );
+    return QuestStepSchema.parse(response.data);
   },
   
   /**
@@ -244,6 +256,21 @@ export const api = {
       `/user/progress/${questId}`,
       { method: 'DELETE' }
     );
+  },
+
+  /**
+   * Проверка геолокации текущего чекпоинта
+   * POST /user/progress/{questId}/check
+   */
+  checkQuestStep: async (
+    questId: string,
+    body: QuestStepCheckBody
+  ): Promise<QuestStepCheckResultData> => {
+    const response = await apiRequest<{ success: true; data: QuestStepCheckResultData }>(
+      `/user/progress/${questId}/check`,
+      { method: 'POST', body: JSON.stringify(body) }
+    );
+    return response.data;
   },
 
   // ============ AUTHENTICATION ============

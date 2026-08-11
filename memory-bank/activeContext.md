@@ -4,42 +4,38 @@
 
 ## 🎯 Текущее состояние
 
-**Статус:** 🎯 Готов к новой задаче (`/van` mode)  
-**Последняя активность:** 2025-12-30  
-**Последняя завершённая задача:** CQST-011 - Likes System Refactoring (Dedicated Table)  
-**Следующий шаг:** Используйте `/van` для анализа новой задачи
+**Статус:** 🎯 Готов к новой задаче (Используйте `/van`)
+**Активная задача:** Нет
+**Последняя активность:** 2026-08-11
 
-**Архив CQST-011:** `memory-bank/archive/archive-CQST-011-20251230.md`  
-**Reflection CQST-011:** `memory-bank/reflection/reflection-CQST-011.md`
+**Архив CQST-012:** `memory-bank/archive/archive-CQST-012.md`  
+**Reflection CQST-012:** `memory-bank/reflection/reflection-CQST-012.md`
 
-**Предыдущая завершённая:** CQST-010 - DDD Refactoring (архивирована)  
-**Архив:** `memory-bank/archive/archive-CQST-010-20251228.md`
+**Предыдущая завершённая:** CQST-011 - Likes System Refactoring  
+**Архив:** `memory-bank/archive/archive-CQST-011-20251230.md`
+
+---
+
+## 📋 Текущая задача: Нет активной задачи
+
+Ожидание выбора новой задачи...
 
 ---
 
 ## 📝 История последних задач
 
-### ✅ CQST-011: Likes System Refactoring - Dedicated Table
+### ✅ CQST-012: Quest Steps Implementation
 
-**Дата:** 2025-12-28 → 2025-12-30  
-**Статус:** ✅ COMPLETED & ARCHIVED  
-**Архив:** `archive-CQST-011-20251230.md`  
-**Reflection:** `reflection-CQST-011.md`
+**Дата:** 2026-01-11 → 2026-08-11
+**Статус:** ✅ COMPLETED & ARCHIVED
+**Архив:** `archive-CQST-012.md`
+**Reflection:** `reflection-CQST-012.md`
 
 **Ключевые достижения:**
-- ✅ Dedicated table `quest_likes` с FK constraints CASCADE
-- ✅ QuestLike entity + Repository в Quest domain
-- ✅ N+1 query optimization: `getLikedStatusMap()` batch query
-- ✅ 129 тестов (100% pass rate, +11 integration tests)
-- ✅ Бизнес-правило: лайк для квестов в прогрессе (active/paused/completed)
-- ✅ Meta.liked счетчик + denormalized counter
-- ✅ Время: ~3.5ч (оценка: 2.5-3ч, +17% из-за scope расширения)
-
-**Key Insights:**
-- 💡 Final classes в DDD services: real instance + mocked dependencies
-- 💡 Batch queries критичны для performance
-- 💡 Denormalization с DQL оптимальна для счетчиков
-- 💡 Business rules в backend (403) + frontend (UI)
+- ✅ QuestStep entity с привязкой к Quest
+- ✅ Логика геолокации вынесена в Shared модуль
+- ✅ Автоматический переход и завершение квестов
+- ✅ Event Sourcing поддержка чекпоинтов
 
 ---
 
@@ -85,21 +81,20 @@
 **Статус:** Все задачи завершены и заархивированы  
 **Следующий шаг:** `/van` для инициализации новой задачи
 
-**Последняя завершённая:** CQST-011 - Likes System Refactoring  
-**Архив:** `memory-bank/archive/archive-CQST-011-20251230.md`
+**Последняя завершённая:** CQST-012 - Quest Steps Implementation
+**Архив:** `memory-bank/archive/archive-CQST-012.md`
 
 ---
 
-## 📝 Детальная информация о последней задаче (CQST-010)
+## 📝 Детальная информация о последней задаче (CQST-012)
 
-**См. полную документацию в архиве:** `memory-bank/archive/archive-CQST-010-20251228.md`
+**См. полную документацию в архиве:** `memory-bank/archive/archive-CQST-012.md`
 
 **Краткое резюме:**
-- ✅ Event Sourcing infrastructure (17 новых файлов)
-- ✅ 6 доменных событий + Event Store
-- ✅ 19 тестов (100% pass rate)
-- ✅ PlatformResolver + Platform VO (бонус)
-- ✅ Время: ~10ч (оценка: 9-12ч)
+- ✅ Имплементированы чекпоинты (Quest Steps)
+- ✅ Сделан сервис расчета расстояний на базе гаверсинуса (GeolocationService)
+- ✅ Модифицирована логика старта и проверки квеста
+- ✅ Имплементирован авто-комплит квеста при прохождении последнего шага.
 
 ---
 
@@ -386,13 +381,7 @@
 ### Backend API (продолжение MVP)
 
 **ПРИОРИТЕТ: ВЫСОКИЙ**
-1. **Quest Steps (чекпоинты)**
-   - CRUD для steps в квестах
-   - Связь Quest → QuestStep (1:N)
-   - Валидация координат и радиуса
-   - Level: 3-4 (Intermediate/Complex)
-
-2. **Checkpoint Verification**
+1. **Checkpoint Verification**
    - Проверка геолокации пользователя
    - State machine для прогресса по steps
    - Real-time notifications
