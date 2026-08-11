@@ -1,0 +1,60 @@
+schema: spec-driven
+
+context: |
+  Project: CityQuest — interactive location-based city quests (Web, iOS, Android).
+  Domain: users find/start/complete quests with geolocation checkpoints.
+
+  Tech stack:
+  - Backend: Symfony 6.4, PHP 8.3, Doctrine ORM 3, PostgreSQL 16, Lexik JWT, Messenger (sync)
+  - Frontend: React 19, TypeScript 5.8, Vite 6.3, Tailwind 3.4, React Router 7.5, Zod
+  - Infra: Docker Compose (nginx, php-fpm, postgres); Mobile: Flutter (planned)
+
+  Architecture:
+  - DDD bounded contexts: User, Quest, UserProgress, City, Platform, Shared/Geo
+  - Layers: Domain / Application / Infrastructure / Presentation
+  - UUID PKs for aggregates; QuestStep uses INTEGER auto-increment
+  - Event Sourcing for UserProgress (domain_events_progress append-only log)
+  - No FK/CASCADE on quest_steps → quests (flexibility)
+
+  Conventions:
+  - PHP: PSR-12, strict_types, final classes by default, PHPStan Level 5, PHPUnit in Docker only
+  - Tests: `docker compose exec php-fpm php bin/phpunit` (never run locally)
+  - DB: every Doctrine migration MUST sync `data/init-db/cityquest.sql`
+  - API: REST JSON; envelope `{data: ..., meta?: ...}`; JWT via HttpOnly cookies
+  - Frontend: credentials: 'include'; client cache via CacheManager (cities TTL 1h)
+  - UI: primary #ed8e34; Inter; 8px spacing grid
+
+  Historical docs (read-only reference, not active workflow):
+  - memory-bank-archive/ — past CQST tasks, reflections, archives, security audit, MVP specs
+
+  Current product status (as of CQST-012):
+  - Auth, profile, quest list/detail/nearby, likes, progress start/pause/complete/abandon
+  - Quest steps + geocheck + auto-complete on last step (backend done)
+  - Frontend ~70%; Mobile 0%
+
+rules:
+  proposal:
+    - Keep proposals concise; include Non-goals
+    - Reference existing DDD domains (User/Quest/UserProgress) before inventing new ones
+    - Note if migration + init-db.sql sync is required
+  specs:
+    - Use Given/When/Then scenarios
+    - Behavior-first; no class/framework names in requirements
+    - Cover auth (401/403) and error cases for protected endpoints
+  design:
+    - Prefer extending existing domains over new bounded contexts
+    - Call out Event Sourcing impact when touching UserProgress
+  tasks:
+    - Group by phase; keep tasks completable in one session
+    - Include Docker PHPUnit / PHPStan checks for backend work
+
+operations:
+  apply:
+    guidance:
+      - Prefer minimal diffs; follow existing DDD layering
+      - Run focused PHPUnit in Docker for backend changes
+      - Sync data/init-db/cityquest.sql if schema changes
+  archive:
+    guidance:
+      - Keep completion summary concise
+      - Confirm delta specs merged into openspec/specs/
