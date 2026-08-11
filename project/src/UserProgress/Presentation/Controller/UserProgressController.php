@@ -186,6 +186,70 @@ class UserProgressController extends AbstractController
     }
 
     /**
+     * Check quest step geolocation
+     * 
+     * POST /api/user/progress/{questId}/check
+     */
+    #[Route('/{questId}/check', name: 'check', methods: ['POST'])]
+    public function checkQuestStep(Request $request, string $questId): JsonResponse
+    {
+        try {
+            $user = $this->getAuthenticatedUserOr401Response();
+            if ($user instanceof JsonResponse) {
+                return $user;
+            }
+            assert($user instanceof User);
+            $userId = $user->getId();
+            $questId = Uuid::fromString($questId);
+
+            $data = json_decode($request->getContent(), true);
+            
+            if (!isset($data['latitude']) || !isset($data['longitude'])) {
+                return $this->json([
+                    'error' => 'Latitude and longitude are required'
+                ], Response::HTTP_BAD_REQUEST);
+            }
+
+            $latitude = (float) $data['latitude'];
+            $longitude = (float) $data['longitude'];
+
+            if ($latitude < -90 || $latitude > 90 || $longitude < -180 || $longitude > 180) {
+                return $this->json([
+                    'error' => 'Invalid coordinates'
+                ], Response::HTTP_BAD_REQUEST);
+            }
+
+            $result = $this->progressService->checkQuestStep($userId, $questId, $latitude, $longitude);
+
+            if (!$result['success']) {
+                return $this->json([
+                    'success' => false,
+                    'error' => $result['error'],
+                    'distance' => $result['distance'],
+                ], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+
+            return $this->json([
+                'success' => true,
+                'data' => $result,
+            ]);
+        } catch (\InvalidArgumentException $e) {
+            return $this->json([
+                'error' => 'Invalid quest ID format'
+            ], Response::HTTP_BAD_REQUEST);
+        } catch (ProgressNotFoundException $e) {
+            return $this->json([
+                'error' => 'Quest is not active'
+            ], Response::HTTP_FORBIDDEN);
+        } catch (\Exception $e) {
+            return $this->json([
+                'error' => 'Failed to check quest step',
+                'message' => $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
      * Abandon a quest (delete progress)
      * 
      * DELETE /api/user/progress/{questId}

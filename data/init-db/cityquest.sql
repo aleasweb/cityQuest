@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS quests (
     is_popular BOOLEAN DEFAULT FALSE NOT NULL,
     latitude DOUBLE PRECISION,
     longitude DOUBLE PRECISION,
+    type VARCHAR(20) DEFAULT 'linear' NOT NULL,
     created_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL,
     updated_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL
 );
@@ -58,6 +59,7 @@ CREATE TABLE IF NOT EXISTS user_quest_progress (
     quest_id UUID NOT NULL,
     status VARCHAR(20) DEFAULT 'active' NOT NULL,
     completed_at TIMESTAMP(0) WITHOUT TIME ZONE,
+    current_step_number INTEGER DEFAULT NULL,
     created_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL,
     updated_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL,
     CONSTRAINT fk_user_quest_progress_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -96,31 +98,84 @@ CREATE INDEX IF NOT EXISTS idx_quest_likes_user ON quest_likes(user_id);
 CREATE INDEX IF NOT EXISTS idx_quest_likes_quest ON quest_likes(quest_id);
 CREATE INDEX IF NOT EXISTS idx_quest_likes_created_at ON quest_likes(created_at);
 
+-- Таблица шагов квеста (чекпоинты)
+CREATE TABLE IF NOT EXISTS quest_steps (
+    id SERIAL PRIMARY KEY,
+    quest_id UUID NOT NULL,
+    number INTEGER NOT NULL,
+    title VARCHAR(255),
+    text TEXT,
+    image_url VARCHAR(500),
+    audio_url VARCHAR(500),
+    video_url VARCHAR(500),
+    lat DOUBLE PRECISION NOT NULL,
+    lng DOUBLE PRECISION NOT NULL,
+    radius INTEGER NOT NULL,
+    status INTEGER DEFAULT 1 NOT NULL,
+    created_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL,
+    updated_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL,
+    CONSTRAINT quest_steps_quest_number_unique UNIQUE (quest_id, number)
+);
+
+COMMENT ON TABLE quest_steps IS 'Quest checkpoints/steps with geolocation validation';
+COMMENT ON COLUMN quest_steps.quest_id IS '(DC2Type:uuid)';
+COMMENT ON COLUMN quest_steps.status IS '0=inactive, 1=active';
+COMMENT ON COLUMN quest_steps.radius IS 'Validation radius in meters';
+
+-- Индексы для quest_steps
+CREATE INDEX IF NOT EXISTS idx_quest_steps_quest_id ON quest_steps (quest_id);
+CREATE INDEX IF NOT EXISTS idx_quest_steps_status ON quest_steps (status);
+
 
 INSERT INTO quests (
     id, title, description, city, difficulty, duration_minutes, distance_km, image_url,
-    author, likes_count, is_popular, latitude, longitude, created_at, updated_at
+    author, likes_count, is_popular, latitude, longitude, type, created_at, updated_at
 ) VALUES
       ('b4362704-891a-4e7f-850d-6be733124628', 'Вдоль по улице (часть 1)',
        'Ваша задача по фотографиям понять на какой улице находятся данные объекты. А затем найти сами объекты в любом порядке.\nВажно! Все объекты находятся на одной улице',
-       'Penza', 'medium', 60, 4.0, '/s3/q1.png', 'aleas', 2, TRUE, 53.20166, 45.00564, '2025-11-30 12:36:59', '2025-11-30 12:36:59'),
+       'Penza', 'medium', 60, 4.0, '/s3/q1.png', 'aleas', 2, TRUE, 53.20166, 45.00564, 'linear', '2025-11-30 12:36:59', '2025-11-30 12:36:59'),
 
       ('bbeee4d6-d112-46d8-983c-9b2dae6f24dc', 'Вдоль по улице (часть 2)',
        'Ваша задача по фотографиям понять на какой улице находятся данные объекты. А затем найти сами объекты в любом порядке.\nВажно! Все объекты находятся на одной улице',
-       'Penza', 'medium', 50, 4.0, '/s3/q2.png', 'aleas', 0, TRUE, 53.20266, 45.00614, '2025-11-30 12:36:59', '2025-11-30 12:36:59'),
+       'Penza', 'medium', 50, 4.0, '/s3/q2.png', 'aleas', 0, TRUE, 53.20266, 45.00614, 'linear', '2025-11-30 12:36:59', '2025-11-30 12:36:59'),
 
       ('2e90c723-8613-4121-8098-b52ba8fd5b8e', 'Пензенские силуэты',
        'Ваша задача по силуэту объекта с изображения понять, что это за объект в городе и найти его',
-       'Penza', 'easy', 80, 5.0, '/s3/q3.png', 'aleas', 4, TRUE, 53.20366, 45.00664, '2025-11-30 12:36:59', '2025-11-30 12:36:59'),
+       'Penza', 'easy', 80, 5.0, '/s3/q3.png', 'aleas', 4, TRUE, 53.20366, 45.00664, 'linear', '2025-11-30 12:36:59', '2025-11-30 12:36:59'),
 
       ('349ab46f-acab-4500-b421-97e83955bfbf', 'Внимание к деталям',
        'Ваша задача по фото детали объекта понять частью какого реального объекта она является и найти сам объект',
-       'Penza', 'difficult', 100, 4.0, '/s3/q4.jpeg', 'aleas', 5, FALSE, 53.20466, 45.00764, '2025-11-30 12:36:59', '2025-11-30 12:36:59'),
+       'Penza', 'difficult', 100, 4.0, '/s3/q4.jpeg', 'aleas', 5, FALSE, 53.20466, 45.00764, 'linear', '2025-11-30 12:36:59', '2025-11-30 12:36:59'),
 
       ('1889ea69-d48e-4ef0-9da8-f9028517a2e1', 'Старая Пенза',
        'Ваша задача по архивному фото понять что это за объект и найти место его расположения',
-       'Penza', 'medium', 60, NULL, '/s3/q5.png', 'aleas', 3, TRUE, 53.20316, 45.00664, '2025-11-30 12:36:59', '2025-11-30 12:36:59'),
+       'Penza', 'medium', 60, NULL, '/s3/q5.png', 'aleas', 3, TRUE, 53.20316, 45.00664, 'linear', '2025-11-30 12:36:59', '2025-11-30 12:36:59'),
 
       ('3db76d13-a3f8-4719-8534-0e03132b72f4', 'Московский кремль',
        'Ваша задача по фото найти объекты на территории московского кремля',
-       'Moscow', 'easy', 30, 2.0, '/s3/q6.webp', 'aleas', 5, FALSE, 55.752121, 37.617664, '2025-11-30 12:36:59', '2025-11-30 12:36:59');
+       'Moscow', 'easy', 30, 2.0, '/s3/q6.webp', 'aleas', 5, FALSE, 55.752121, 37.617664, 'linear', '2025-11-30 12:36:59', '2025-11-30 12:36:59');
+
+-- Quest Steps для тестирования
+INSERT INTO quest_steps (quest_id, number, title, text, lat, lng, radius, status, created_at, updated_at) VALUES
+    -- Quest 1: Вдоль по улице (часть 1) - 3 шага
+    ('b4362704-891a-4e7f-850d-6be733124628', 2, 'Памятник первопоселенцу', 'Найдите памятник первопоселенцу Пензы', 53.20166, 45.00564, 50, 1, '2026-01-12 10:00:00', '2026-01-12 10:00:00'),
+    ('b4362704-891a-4e7f-850d-6be733124628', 3, 'Спасский кафедральный собор', 'Посетите Спасский собор', 53.20266, 45.00614, 75, 1, '2026-01-12 10:00:00', '2026-01-12 10:00:00'),
+    ('b4362704-891a-4e7f-850d-6be733124628', 4, 'Памятник В.Г. Белинскому', 'Найдите памятник Белинскому', 53.20366, 45.00664, 50, 1, '2026-01-12 10:00:00', '2026-01-12 10:00:00'),
+    
+    -- Quest 2: Вдоль по улице (часть 2) - 3 шага
+    ('bbeee4d6-d112-46d8-983c-9b2dae6f24dc', 1, 'Театр драмы им. Луначарского', 'Посетите драматический театр', 53.19516, 45.01764, 100, 0, '2026-01-12 10:00:00', '2026-01-12 10:00:00'),
+    ('bbeee4d6-d112-46d8-983c-9b2dae6f24dc', 2, 'Фонтан "Росток"', 'Найдите фонтан Росток', 53.19616, 45.01814, 50, 1, '2026-01-12 10:00:00', '2026-01-12 10:00:00'),
+    ('bbeee4d6-d112-46d8-983c-9b2dae6f24dc', 3, 'Пензенская областная библиотека', 'Посетите областную библиотеку', 53.19716, 45.01864, 75, 1, '2026-01-12 10:00:00', '2026-01-12 10:00:00'),
+    
+    -- Quest 3: Пензенские силуэты - 4 шага
+    ('2e90c723-8613-4121-8098-b52ba8fd5b8e', 1, 'Монумент воинской славы', 'Найдите монумент на площади Победы', 53.18666, 45.00564, 100, 1, '2026-01-12 10:00:00', '2026-01-12 10:00:00'),
+    ('2e90c723-8613-4121-8098-b52ba8fd5b8e', 2, 'Светофорное дерево', 'Найдите необычное дерево из светофоров', 53.18766, 45.00614, 50, 1, '2026-01-12 10:00:00', '2026-01-12 10:00:00'),
+    ('2e90c723-8613-4121-8098-b52ba8fd5b8e', 3, 'Часы с кукушкой', 'Найдите уличные часы', 53.18866, 45.00664, 50, 1, '2026-01-12 10:00:00', '2026-01-12 10:00:00'),
+    ('2e90c723-8613-4121-8098-b52ba8fd5b8e', 4, 'Скульптура "Градоначальник"', 'Найдите бронзовую скульптуру градоначальника', 53.18966, 45.00714, 50, 1, '2026-01-12 10:00:00', '2026-01-12 10:00:00'),
+    
+    -- Quest 6: Московский кремль - 5 шагов
+    ('3db76d13-a3f8-4719-8534-0e03132b72f4', 1, 'Спасская башня', 'Посетите знаменитую Спасскую башню', 55.752121, 37.617664, 100, 1, '2026-01-12 10:00:00', '2026-01-12 10:00:00'),
+    ('3db76d13-a3f8-4719-8534-0e03132b72f4', 2, 'Царь-пушка', 'Найдите Царь-пушку', 55.752521, 37.618164, 75, 1, '2026-01-12 10:00:00', '2026-01-12 10:00:00'),
+    ('3db76d13-a3f8-4719-8534-0e03132b72f4', 3, 'Царь-колокол', 'Найдите Царь-колокол', 55.752921, 37.618664, 75, 1, '2026-01-12 10:00:00', '2026-01-12 10:00:00'),
+    ('3db76d13-a3f8-4719-8534-0e03132b72f4', 4, 'Успенский собор', 'Посетите Успенский собор', 55.753321, 37.619164, 100, 1, '2026-01-12 10:00:00', '2026-01-12 10:00:00'),
+    ('3db76d13-a3f8-4719-8534-0e03132b72f4', 5, 'Архангельский собор', 'Завершите квест у Архангельского собора', 55.753721, 37.619664, 100, 1, '2026-01-12 10:00:00', '2026-01-12 10:00:00');

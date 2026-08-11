@@ -31,6 +31,9 @@ services:
     App\UserProgress\:
         resource: '../src/UserProgress/*'
         exclude: '../src/UserProgress/{Domain/Entity,Domain/ValueObject,Tests,Kernel.php}'
+    App\Shared\:
+        resource: '../src/Shared/*'
+        exclude: '../src/Shared/{Domain/Entity,Domain/ValueObject,Tests,Kernel.php}'
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
@@ -46,6 +49,10 @@ services:
     # QuestLike Repository binding
     App\Quest\Domain\Repository\QuestLikeRepositoryInterface:
         class: App\Quest\Infrastructure\Db\DoctrineQuestLikeRepository
+    
+    # QuestStep Repository binding
+    App\Quest\Domain\Repository\QuestStepRepositoryInterface:
+        class: App\Quest\Infrastructure\Repository\DoctrineQuestStepRepository
     
     # UserProgress Repository binding
     App\UserProgress\Domain\Repository\UserQuestProgressRepositoryInterface:

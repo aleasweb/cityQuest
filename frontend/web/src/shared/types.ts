@@ -50,6 +50,43 @@ export const UserProgressSchema = z.object({
 
 export type UserProgress = z.infer<typeof UserProgressSchema>;
 
+// Quest step (чекпоинт) — ответ GET /quests/{questId}/steps/{stepNumber}
+export const QuestStepCoordinatesSchema = z.object({
+  lat: z.number(),
+  lng: z.number(),
+});
+
+export const QuestStepSchema = z.object({
+  id: z.number(),
+  number: z.number(),
+  title: z.string().nullable(),
+  text: z.string().nullable(),
+  imageUrl: z.string().nullable(),
+  audioUrl: z.string().nullable(),
+  videoUrl: z.string().nullable(),
+  coordinates: QuestStepCoordinatesSchema,
+  radius: z.number(),
+  createdAt: z.string(),
+});
+
+export type QuestStep = z.infer<typeof QuestStepSchema>;
+
+export const QuestStepCheckBodySchema = z.object({
+  latitude: z.number().gte(-90).lte(90),
+  longitude: z.number().gte(-180).lte(180),
+});
+
+export type QuestStepCheckBody = z.infer<typeof QuestStepCheckBodySchema>;
+
+/** Внутренние поля `data` при успешном POST /user/progress/{questId}/check */
+export const QuestStepCheckResultDataSchema = z.object({
+  success: z.literal(true),
+  nextStepNumber: z.number().optional(),
+  distance: z.number(),
+});
+
+export type QuestStepCheckResultData = z.infer<typeof QuestStepCheckResultDataSchema>;
+
 // Quest Progress Types (для истории)
 export interface QuestProgressItem {
   quest: {

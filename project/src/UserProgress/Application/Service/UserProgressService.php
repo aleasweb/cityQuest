@@ -7,9 +7,13 @@ namespace App\UserProgress\Application\Service;
 use App\Platform\Application\Service\PlatformResolver;
 use App\Quest\Application\Service\QuestLikeService;
 use App\Quest\Domain\Exception\QuestNotFoundException;
+use App\Quest\Domain\Exception\QuestStepNotFoundException;
 use App\Quest\Domain\Repository\QuestRepositoryInterface;
+use App\Quest\Domain\Repository\QuestStepRepositoryInterface;
+use App\Shared\Geo\Application\Service\GeolocationService;
 use App\UserProgress\Domain\Entity\UserQuestProgress;
 use App\UserProgress\Domain\Event\AbstractUserQuestProgressEvent;
+use App\UserProgress\Domain\Event\QuestStepCheckEvent;
 use App\UserProgress\Domain\Exception\ActiveQuestExistsException;
 use App\UserProgress\Domain\Exception\ProgressNotFoundException;
 use App\UserProgress\Domain\Repository\ProgressEventStoreInterface;
@@ -23,7 +27,9 @@ class UserProgressService
         private readonly QuestRepositoryInterface $questRepository,
         private readonly ProgressEventStoreInterface $eventStore,
         private readonly PlatformResolver $platformResolver,
-        private readonly QuestLikeService $questLikeService
+        private readonly QuestLikeService $questLikeService,
+        private readonly QuestStepRepositoryInterface $questStepRepository,
+        private readonly GeolocationService $geolocationService
     ) {
     }
 
@@ -56,6 +62,13 @@ class UserProgressService
         // Create new progress
         $progress = new UserQuestProgress($userId, $questId);
         $progress->start();
+        
+        $firstStep = $this->questStepRepository->findFirstActiveByQuest($questId);
+        if ($firstStep === null) {
+            throw QuestStepNotFoundException::withQuestStepAndNumber($questId, 0);
+        }
+        $progress->setCurrentStepNumber($firstStep->getNumber());
+
         $this->progressRepository->save($progress);
         $this->storeEvents($progress);
 
@@ -167,6 +180,88 @@ class UserProgressService
     public function getActiveQuest(Uuid $userId): ?UserQuestProgress
     {
         return $this->progressRepository->findActiveByUserId($userId);
+    }
+
+    /**
+     * Check quest step geolocation and advance to next step if valid
+     *
+     * @return array{success: bool, nextStepNumber?: int, completed?: bool, distance: float, error?: string}
+     * @throws ProgressNotFoundException if quest is not active
+     */
+    public function checkQuestStep(
+        Uuid $userId,
+        Uuid $questId,
+        float $userLat,
+        float $userLng
+    ): array {
+        // Get active progress
+        $progress = $this->progressRepository->findActiveByUserId($userId);
+        
+        if ($progress === null) {
+            // @todo Store failed check event
+            throw ProgressNotFoundException::forUserAndQuest($userId, $questId);
+        }
+
+        $currentStepNumber = $progress->getCurrentStepNumber();
+        if ($currentStepNumber === null) {
+            // @todo Store failed check event
+            throw ProgressNotFoundException::forUserAndQuest($userId, $questId);
+        }
+
+        $currentStep = $this->questStepRepository->findByQuestAndNumber($questId, $currentStepNumber);
+        if ($currentStep === null || !$currentStep->isActive()) {
+            // @todo Store failed check event
+            throw ProgressNotFoundException::forUserAndQuest($userId, $questId);
+        }
+
+        $distance = $this->geolocationService->calculateDistance(
+            $userLat,
+            $userLng,
+            $currentStep->getLat(),
+            $currentStep->getLng()
+        );
+
+        $isCorrectCheck = $this->geolocationService->isWithinRadius(
+            $userLat,
+            $userLng,
+            $currentStep->getLat(),
+            $currentStep->getLng(),
+            $currentStep->getRadius()
+        );
+
+        if (!$isCorrectCheck) {
+            // @todo Store failed check event
+
+            return [
+                'success' => false,
+                'distance' => $distance,
+                'error' => 'You are outside the checkpoint radius',
+            ];
+        }
+
+        $progress->check();
+
+        // проверим не последний ли это шаг квеста
+        $isLastStep = $this->questStepRepository->isLastActiveStep($questId, $currentStepNumber);
+
+        if ($isLastStep) {
+            $progress->complete();
+            $nextStep = null;
+        } else {
+            $nextStep = $this->questStepRepository->findNextActiveByQuestAndNumber($questId, $currentStepNumber);
+            if ($nextStep !== null) {
+                $progress->complete();
+            }
+        }
+
+        $this->storeEvents($progress);
+        $this->progressRepository->save($progress);
+
+        return [
+            'success' => true,
+            'nextStepNumber' => $nextStep?->getNumber(),
+            'distance' => $distance,
+        ];
     }
 
     /**
