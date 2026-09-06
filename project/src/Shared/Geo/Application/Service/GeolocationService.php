@@ -6,11 +6,10 @@ namespace App\Shared\Geo\Application\Service;
 
 final class GeolocationService
 {
-    private const EARTH_RADIUS_KM = 6371;
     private const EARTH_RADIUS_METERS = 6371000;
 
     /**
-     * Calculate distance between two points using Haversine formula
+     * Рассчитать расстояние между двумя точками по формуле Гаверсинуса
      */
     public function calculateDistance(
         float $lat1,
@@ -37,7 +36,7 @@ final class GeolocationService
     }
 
     /**
-     * Check if user coordinates are within the specified radius from a point
+     * Проверить, находятся ли координаты пользователя в пределах указанного радиуса от точки.
      */
     public function isWithinRadius(
         float $userLat,
