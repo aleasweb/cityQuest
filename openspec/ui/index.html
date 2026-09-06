@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenSpec Viewer</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="lib/marked.min.js"></script>
+</head>
+<body>
+    <!-- Экран запроса прав -->
+    <div id="setup-screen" class="screen">
+        <div class="setup-box">
+            <h1>OpenSpec Viewer</h1>
+            <p>Для отображения спецификаций интерфейсу необходим доступ к директории проекта.</p>
+            <button id="grant-btn" class="primary-btn">Разрешить чтение папки openspec</button>
+            <p class="hint" id="grant-hint">При первом запуске потребуется выбрать папку `openspec` в диалоговом окне.</p>
+        </div>
+    </div>
+
+    <!-- Основной интерфейс -->
+    <div id="app-screen" class="screen hidden">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>OpenSpec</h2>
+            </div>
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="specs">Specs</button>
+                <button class="tab-btn" data-tab="archive">Archive</button>
+            </div>
+            <div class="tree-container" id="tree-container">
+                <!-- Дерево файлов генерируется здесь -->
+            </div>
+        </aside>
+        
+        <main class="content-area">
+            <div id="content" class="markdown-body">
+                <div class="empty-state">
+                    Выберите файл в меню слева для просмотра
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

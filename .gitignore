@@ -8,6 +8,3 @@
 /frontend/web/dist/
 /project/frontend/dist/
 /frontend/web/node_modules/
-
-# Local toolchain (Node used for OpenSpec CLI bootstrap)
-.tools/

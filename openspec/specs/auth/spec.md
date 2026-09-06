@@ -1,74 +1,66 @@
-# Auth Specification
+# auth Specification
 
 ## Purpose
-Authentication and session management for CityQuest API clients (Web and future mobile).
+Определяет механизмы аутентификации, управления сессиями и защиты маршрутов, используемые в проекте CityQuest.
 
 ## Requirements
 
 ### Requirement: User Registration
-The system SHALL allow a new user to register with username, email, and password.
+Система ДОЛЖНА позволять пользователям регистрироваться с уникальными email и username, а также паролем. 
+Система ДОЛЖНА строго валидировать входные данные.
 
 #### Scenario: Successful registration
-- GIVEN valid username, email, and password
-- WHEN the client submits registration
-- THEN a new user account is created
-- AND the response indicates success
+- **WHEN** клиент отправляет валидные данные (email, username, password) на эндпоинт регистрации
+- **THEN** система создает пользователя и возвращает код 201 Created с данными профиля
+- **TESTS**:
+  - Backend: `AuthControllerTest::testSuccessfulRegistration`
 
-#### Scenario: Duplicate identity
-- GIVEN a username or email that already exists
-- WHEN the client submits registration
-- THEN the system rejects the request with a validation error
+#### Scenario: Registration with existing email or username
+- **WHEN** клиент отправляет данные с уже занятым email или username
+- **THEN** система возвращает ошибку 409 Conflict
+- **TESTS**:
+  - Backend: `AuthControllerTest::testRegistrationWithExistingEmail`
+  - Backend: `AuthControllerTest::testRegistrationWithExistingUsername`
 
-### Requirement: Username-based Login
-The system SHALL authenticate users by username and password and issue a JWT session.
+#### Scenario: Registration with invalid data
+- **WHEN** клиент отправляет невалидные данные (некорректный email, короткий пароль, недопустимые символы в username, пустые поля)
+- **THEN** система возвращает ошибку 400 Bad Request с массивом нарушений валидации
+- **TESTS**:
+  - Backend: `AuthControllerTest::testRegistrationWithInvalidEmail`
+  - Backend: `AuthControllerTest::testRegistrationWithShortPassword`
+  - Backend: `AuthControllerTest::testRegistrationWithShortUsername`
+  - Backend: `AuthControllerTest::testRegistrationWithInvalidUsernameCharacters`
+  - Backend: `AuthControllerTest::testRegistrationWithMissingFields`
 
-#### Scenario: Valid credentials
-- GIVEN a registered user with correct password
-- WHEN the client submits login
-- THEN authentication succeeds
-- AND user identity data is returned to the client
+### Requirement: JWT Authentication via HttpOnly Cookies
+Система ДОЛЖНА использовать JWT (JSON Web Token) для аутентификации пользователей, передавая токен исключительно через HttpOnly cookies для защиты от XSS-атак.
 
-#### Scenario: Invalid credentials
-- GIVEN invalid username or password
-- WHEN the client submits login
-- THEN authentication fails
-- AND no session is established
+#### Scenario: Successful authentication
+- **WHEN** клиент отправляет валидные учетные данные на эндпоинт логина
+- **THEN** сервер возвращает успешный ответ и устанавливает HttpOnly cookie с JWT
+- **TESTS**:
+  - Backend: `AuthControllerTest::testSuccessfulLogin`
 
-### Requirement: HttpOnly Cookie Session
-The system MUST deliver the JWT in an HttpOnly cookie (not readable by client JavaScript).
+### Requirement: CORS and Credentials
+API ДОЛЖНО принимать запросы с аутентификацией только от разрешенных origin (whitelist) и требовать передачи credentials (cookies) во всех защищенных запросах.
 
-#### Scenario: Authenticated API call
-- GIVEN a client that logged in successfully
-- WHEN the client calls a protected endpoint with credentials included
-- THEN the server authenticates via the HttpOnly cookie
+#### Scenario: Cross-origin request with credentials
+- **WHEN** фронтенд делает запрос к защищенному эндпоинту с `credentials: 'include'`
+- **THEN** сервер обрабатывает запрос, читая токен из cookie
 
-### Requirement: Current User Endpoint
-The system SHALL expose an endpoint that returns the authenticated user's profile data from the server session.
+### Requirement: Protected Endpoints Access
+Система ДОЛЖНА ограничивать доступ к защищенным эндпоинтам (таким как профиль, прогресс, лайки), требуя наличия валидного JWT.
 
-#### Scenario: Authenticated me
-- GIVEN a valid session cookie
-- WHEN the client requests the current user
-- THEN the server returns the user data
-- AND the client does not decode the JWT locally
+#### Scenario: Accessing protected endpoint without token
+- **WHEN** неаутентифицированный клиент запрашивает данные профиля пользователя
+- **THEN** система возвращает ошибку 401 Unauthorized
+- **TESTS**:
+  - Backend: `ProfileControllerTest::testGetProfileRequiresAuthentication`
 
-#### Scenario: Missing session
-- GIVEN no valid session
-- WHEN the client requests the current user
-- THEN the system responds with 401 Unauthorized
+#### Scenario: Accessing protected endpoint with expired token
+- **WHEN** клиент запрашивает защищенный ресурс с истекшим JWT
+- **THEN** система возвращает ошибку 401 Unauthorized
 
-### Requirement: Logout
-The system SHALL invalidate the client session on logout by clearing the HttpOnly cookie.
-
-#### Scenario: Explicit logout
-- GIVEN an authenticated session
-- WHEN the client logs out
-- THEN the session cookie is removed
-- AND subsequent protected requests fail with 401
-
-### Requirement: Security Headers
-The system SHALL send HTTP security headers that mitigate XSS, clickjacking, and MIME sniffing.
-
-#### Scenario: Document and API responses include headers
-- GIVEN a request to the web or API origin
-- WHEN the response is returned
-- THEN security headers (including CSP-related protections) are present
+#### Scenario: Accessing forbidden resource
+- **WHEN** аутентифицированный клиент пытается получить доступ к ресурсу, на который у него нет прав (например, чужой профиль)
+- **THEN** система возвращает ошибку 403 Forbidden

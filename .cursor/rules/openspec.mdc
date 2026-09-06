@@ -1,0 +1,27 @@
+---
+description: Правила ведения документации и тестов в OpenSpec
+globs: openspec/**/*, .cursor/skills/**/*
+---
+
+# Правила ведения документации и тестов OpenSpec
+
+При планировании (`/opsx-propose`) и реализации (`/opsx-apply`) изменений вы обязаны:
+
+1. **Обновление архитектуры:** В генерируемом `tasks.md` всегда создавать отдельную задачу на обновление глобальной архитектурной документации по домену (`openspec/specs/<domain>/architecture.md`).
+2. **Связь тестов со спецификациями:** В `tasks.md` всегда добавлять задачу на простановку ссылок на новые тесты в дельта-спецификации.
+   Пример генерации задач:
+   ```markdown
+   ## Documentation Sync
+   - [ ] 2.1 Обновить `openspec/specs/<domain>/architecture.md`, добавив описание новых архитектурных решений.
+   - [ ] 2.2 Добавить ссылки на новые тесты (`AuthControllerTest.php`) в соответствующие сценарии в `openspec/changes/<change-name>/specs/<domain>/spec.md`.
+   ```
+3. **Реализация тестов:** При написании тестов для backend/frontend обязательно покрывать тесткейсы из `spec.md`.
+   Пример:
+   ```markdown
+   #### Scenario: Accessing protected endpoint without token
+   - **WHEN** неаутентифицированный клиент запрашивает данные профиля
+   - **THEN** система возвращает ошибку 401 Unauthorized
+   - **TESTS**:
+      - Backend: `ProfileControllerTest::testUnauthorizedAccess`
+      - Frontend: `auth.cy.ts`
+   ```

@@ -1,88 +1,72 @@
-# User Progress Specification
+# UserProgress Specification
 
 ## Purpose
-User quest lifecycle: start, pause, complete, abandon, checkpoint geovalidation, and progress history. Domain events record progress actions for audit and analytics.
+Определяет механизмы отслеживания прогресса пользователей в квестах, включая управление статусами, проверку геопозиции на шагах и сбор истории через Event Sourcing.
 
 ## Requirements
 
-### Requirement: Start Quest
-The system SHALL allow an authenticated user to start a quest, creating active progress.
+### Requirement: Управление жизненным циклом квеста
+Система ДОЛЖНА позволять пользователю начинать, ставить на паузу, возобновлять, завершать и отменять квесты. У пользователя может быть только один активный квест одновременно.
 
-#### Scenario: Start when idle
-- GIVEN an authenticated user with no active quest
-- WHEN the user starts a quest
-- THEN progress status becomes active
-- AND current step is set to the first active step when steps exist
+#### Scenario: Start a new quest
+- **WHEN** пользователь начинает новый квест
+- **THEN** система создает `UserQuestProgress` со статусом `active`, устанавливает первый шаг и генерирует `QuestStartedEvent`
+- **TESTS**:
+  - Backend: `UserProgressControllerTest::testStartQuest`
+  - Backend: `UserProgressServiceTest::testStartQuest`
 
-#### Scenario: Conflict with existing active quest
-- GIVEN an authenticated user who already has an active quest
-- WHEN the user attempts to start another quest
-- THEN the system responds with 409 Conflict
+#### Scenario: Start a quest when another is active
+- **WHEN** пользователь пытается начать квест, имея другой активный квест
+- **THEN** система возвращает ошибку 409 Conflict (`ActiveQuestExistsException`)
+- **TESTS**:
+  - Backend: `UserProgressControllerTest::testStartQuestConflict`
+  - Backend: `UserProgressServiceTest::testStartQuestThrowsWhenActiveExists`
 
-### Requirement: Pause and Complete
-The system SHALL allow pausing or completing an active quest.
+#### Scenario: Pause an active quest
+- **WHEN** пользователь ставит активный квест на паузу
+- **THEN** статус меняется на `paused` и генерируется `QuestPausedEvent`
+- **TESTS**:
+  - Backend: `UserProgressControllerTest::testPauseQuest`
 
-#### Scenario: Pause active quest
-- GIVEN active progress
-- WHEN the user pauses
-- THEN status becomes paused
+#### Scenario: Resume a paused quest
+- **WHEN** пользователь начинает квест, который ранее был поставлен на паузу
+- **THEN** статус меняется на `active` и генерируется `QuestResumedEvent`
 
-#### Scenario: Complete active quest
-- GIVEN active progress
-- WHEN the user completes
-- THEN status becomes completed
+#### Scenario: Abandon a quest
+- **WHEN** пользователь отменяет квест (DELETE запрос)
+- **THEN** статус меняется на `new`, генерируется `QuestAbandonedEvent`, и прогресс удаляется из активных
 
-### Requirement: Abandon Quest
-The system SHALL allow abandoning progress for a quest.
+### Requirement: Проверка геопозиции на шагах квеста
+Система ДОЛЖНА проверять координаты пользователя относительно текущего шага квеста и автоматически переводить на следующий шаг или завершать квест.
 
-#### Scenario: Abandon
-- GIVEN existing progress for a quest
-- WHEN the user abandons
-- THEN the progress record is removed or otherwise cleared from active history as defined by the API
+#### Scenario: Successful step check
+- **WHEN** пользователь отправляет координаты, находящиеся в радиусе текущего шага
+- **THEN** система регистрирует прохождение шага (`QuestStepCheckEvent`), возвращает `success: true` и номер следующего шага
+- **TESTS**:
+  - Backend: `UserProgressControllerTest::testCheckQuestStepSuccess`
+  - Backend: `UserProgressServiceTest::testCheckQuestStepSuccess`
 
-### Requirement: Checkpoint Geovalidation
-The system SHALL validate the user's location against the current step radius and advance progress on success.
+#### Scenario: Failed step check (out of radius)
+- **WHEN** пользователь отправляет координаты вне радиуса текущего шага
+- **THEN** система возвращает `success: false` с указанием текущей дистанции до точки и ошибкой 422 Unprocessable Entity
+- **TESTS**:
+  - Backend: `UserProgressControllerTest::testCheckQuestStepOutOfRadius`
 
-#### Scenario: Inside radius
-- GIVEN active progress at step N
-- WHEN the user checks in within the step radius
-- THEN a successful check is recorded
-- AND current step advances to the next active step if one exists
+#### Scenario: Completing the last step
+- **WHEN** пользователь успешно проходит последний шаг квеста
+- **THEN** система автоматически меняет статус квеста на `completed` и генерирует `QuestCompletedEvent`
+- **TESTS**:
+  - Backend: `UserProgressServiceTest::testCheckLastQuestStepCompletesQuest`
 
-#### Scenario: Outside radius
-- GIVEN active progress at step N
-- WHEN the user checks in outside the step radius
-- THEN the system rejects with 422
-- AND the response includes distance information
-- AND a failed check event is recorded
+### Requirement: Получение списка прогресса
+Система ДОЛЖНА предоставлять пользователю список его начатых, завершенных и приостановленных квестов с метаданными.
 
-#### Scenario: Last active step
-- GIVEN active progress on the last active step
-- WHEN the user checks in successfully
-- THEN the quest is completed automatically
+#### Scenario: Get user progress list
+- **WHEN** пользователь запрашивает свой прогресс
+- **THEN** система возвращает список квестов с их статусами, а также метаинформацию (total, completed, in_progress, paused, liked)
+- **TESTS**:
+  - Backend: `UserProgressControllerTest::testGetUserProgress`
 
-#### Scenario: Quest not active
-- GIVEN no active progress
-- WHEN the user attempts a checkpoint check
-- THEN the system responds with 403
-
-### Requirement: Progress Listing
-The system SHALL return the user's quest progress with optional filters (status, liked).
-
-#### Scenario: List progress
-- GIVEN an authenticated user with progress records
-- WHEN the client requests progress
-- THEN matching progress items are returned
-
-### Requirement: Progress Domain Events
-The system SHALL append domain events for progress lifecycle and checkpoint checks to an append-only event store.
-
-#### Scenario: Event on start
-- GIVEN a successful quest start
-- WHEN progress is created
-- THEN a start event is stored with progress, user, quest, and timestamp
-
-#### Scenario: Event on checkpoint check
-- GIVEN a checkpoint check attempt
-- WHEN validation runs
-- THEN a check event is stored including coordinates, distance, and pass/fail outcome
+#### Scenario: Get filtered user progress
+- **WHEN** пользователь запрашивает прогресс с фильтром `?status=active`
+- **THEN** система возвращает только активный квест

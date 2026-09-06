@@ -1,75 +1,32 @@
 # Quest Specification
 
 ## Purpose
-Quest discovery, details, geosearch, likes, and checkpoint (step) content for active quests.
+Определяет механизмы управления квестами, включая их поиск, фильтрацию и просмотр детальной информации в проекте CityQuest.
 
 ## Requirements
 
-### Requirement: Quest Detail
-The system SHALL return quest details by ID for public clients.
+### Requirement: Quest Listing
+Система ДОЛЖНА предоставлять публичный эндпоинт для получения списка квестов с поддержкой фильтрации, сортировки и пагинации.
 
-#### Scenario: Existing quest
-- GIVEN a known quest ID
-- WHEN the client requests quest details
-- THEN the quest payload is returned in the standard API envelope
+#### Scenario: Fetching quests with filters
+- **WHEN** клиент отправляет GET запрос на `/api/quests` с параметрами фильтрации (например, `city`, `difficulty`, `is_popular`)
+- **THEN** система возвращает список квестов, соответствующих критериям, с пагинацией (метаданные `limit`, `offset`, `total`)
 
-#### Scenario: Missing quest
-- GIVEN an unknown quest ID
-- WHEN the client requests quest details
-- THEN the system responds with 404
+#### Scenario: Fetching quests with optional authentication
+- **WHEN** авторизованный клиент отправляет GET запрос с токеном
+- **THEN** система возвращает список квестов, где для каждого квеста установлено поле `isLikedByCurrentUser` (true/false)
 
-### Requirement: Quest Listing and Filters
-The system SHALL list quests with optional filters for city, difficulty, and popularity, plus sorting and pagination.
+### Requirement: Nearby Quests
+Система ДОЛЖНА позволять искать квесты поблизости на основе координат пользователя.
 
-#### Scenario: Filtered list
-- GIVEN filter parameters
-- WHEN the client requests the quest list
-- THEN only matching quests are returned
-- AND pagination metadata is included when applicable
+#### Scenario: Fetching nearby quests
+- **WHEN** клиент отправляет GET запрос на `/api/quests/nearby` с параметрами `lat`, `lng` и `radius`
+- **THEN** система возвращает список квестов, находящихся в заданном радиусе, отсортированных по удаленности
 
-### Requirement: Nearby Quest Search
-The system SHALL find quests near given coordinates using geographic distance.
+### Requirement: Quest Details
+Система ДОЛЖНА предоставлять детальную информацию о конкретном квесте по его идентификатору.
 
-#### Scenario: Nearby search
-- GIVEN user latitude and longitude
-- WHEN the client requests nearby quests
-- THEN quests are ordered by distance from the given point
-
-### Requirement: Quest Likes
-The system SHALL allow an authenticated user to like or unlike a quest that appears in their progress history (active, paused, or completed).
-
-#### Scenario: Toggle like for quest in progress
-- GIVEN an authenticated user with progress on a quest
-- WHEN the user toggles like
-- THEN the like state and quest like count are updated
-
-#### Scenario: Like without progress
-- GIVEN an authenticated user with no progress on a quest
-- WHEN the user attempts to like
-- THEN the system rejects the request with 403
-
-### Requirement: Linear Quest Steps
-The system SHALL model quests as a sequence of active steps with coordinates and a validation radius. Quest type defaults to linear sequential completion.
-
-#### Scenario: First active step on start
-- GIVEN a quest with one or more active steps
-- WHEN the user starts the quest
-- THEN progress tracks the lowest active step number
-
-### Requirement: Step Content for Active Quest
-The system SHALL return step content only when the requesting user has an active quest progress for that quest.
-
-#### Scenario: Active user requests step
-- GIVEN an authenticated user with active progress
-- WHEN the client requests a step by number
-- THEN step content (text, media, coordinates, radius) is returned
-
-#### Scenario: Inactive quest
-- GIVEN a user without active progress on the quest
-- WHEN the client requests a step
-- THEN the system responds with 403
-
-#### Scenario: Missing or inactive step
-- GIVEN an active quest
-- WHEN the client requests a non-existent or inactive step number
-- THEN the system responds with 404
+#### Scenario: Fetching quest details
+- **WHEN** клиент запрашивает `/api/quests/{id}`
+- **THEN** система возвращает полную информацию о квесте (включая описание, автора, сложность, время прохождения и т.д.)
+- **AND** если клиент авторизован, возвращается статус `isLikedByCurrentUser`
