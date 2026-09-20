@@ -11,7 +11,8 @@
 |------|-----------|
 | Backend | Symfony 6.4, PHP 8.3, Doctrine ORM 3, PostgreSQL 16, Lexik JWT |
 | Frontend | React 19, TypeScript 5.8, Vite 6.3, Tailwind 3.4, React Router 7.5, Zod |
-| Infra | Docker Compose (nginx, php-fpm, postgres); Mobile: Flutter (planned) |
+| Mobile | Flutter 3.13+, Riverpod 3, go_router, Dio, Hive CE |
+| Infra | Docker Compose (nginx, php-fpm, postgres) |
 
 ## Структура
 
@@ -24,6 +25,7 @@ project/src/          # Backend (DDD)
   City/               # Справочник городов
   Shared/             # Общие трейты/интерфейсы
 frontend/web/src/     # React SPA
+mobile/lib/           # Flutter App (Feature-First)
 openspec/             # Спецификации и изменения
   specs/              # Основные specs (domain truth)
   changes/            # Активные изменения (delta specs + tasks)
@@ -51,7 +53,13 @@ openspec/             # Спецификации и изменения
 - Zod-схемы для всех API-ответов
 - `credentials: 'include'` во всех fetch-запросах
 - `CacheManager` (LocalStorage, TTL 1ч) для `/api/cities`
-- UI: primary `#ed8e34`, Inter, сетка 8px
+- UI: primary `#f28b2b`, Inter, сетка 8px
+
+### Mobile (Flutter)
+- **Архитектура**: Feature-First (`lib/app/features/`), Clean Architecture (domain, data, application, presentation).
+- **State & DI**: Riverpod 3 (без get_it), навигация через go_router.
+- **Данные**: Dio + cookie_jar для сети, Hive CE для локального кэша.
+- **Дизайн-система**: Строгое использование токенов из `AppColors`, `AppSpacing`, `AppTextStyles` и `Theme.of(context)`. Никаких хардкод-значений.
 
 ### API
 - Публичные эндпоинты: квесты, города, health
@@ -75,6 +83,12 @@ docker compose exec php-fpm php bin/console doctrine:migrations:migrate
 
 # Frontend
 cd frontend/web && npm run dev
+
+# Mobile (Flutter)
+cd mobile
+flutter pub get
+dart run build_runner build -d
+flutter run
 ```
 
 ⚠️ **Никогда не запускай** `php bin/phpunit` локально — тесты зависят от PostgreSQL в Docker.
@@ -107,4 +121,4 @@ cd frontend/web && npm run dev
 - ✅ Прогресс: start / pause / complete / abandon
 - ✅ Лайки (dedicated table), Event Sourcing для UserProgress
 - ✅ Quest steps + геочекпоинты + автозавершение (backend)
-- ⏳ Frontend ~70%; Mobile 0%
+- ✅ Frontend ~70%; Mobile MVP ~90% (базовый UI готов, сборка отложена)

@@ -3,7 +3,7 @@ set -e
 
 echo "🔨 Сборка frontend через Docker..."
 
-cd "$(dirname "$0")/frontend/web"
+cd "$(dirname "$0")/web"
 
 # Собрать образ
 docker build -f Dockerfile.build -t cityquest-frontend-builder .

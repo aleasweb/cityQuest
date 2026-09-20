@@ -7,7 +7,7 @@ context: |
   Tech stack:
   - Backend: Symfony 6.4, PHP 8.3, Doctrine ORM 3, PostgreSQL 16, Lexik JWT, Messenger (sync)
   - Frontend: React 19, TypeScript 5.8, Vite 6.3, Tailwind 3.4, React Router 7.5, Zod
-  - Infra: Docker Compose (nginx, php-fpm, postgres); Mobile: Flutter (planned)
+  - Infra: Docker Compose (nginx, php-fpm, postgres); Mobile: Flutter
 
   Architecture:
   - DDD bounded contexts: User, Quest, UserProgress, City, Platform, Shared/Geo

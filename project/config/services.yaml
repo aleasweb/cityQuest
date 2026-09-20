@@ -52,7 +52,7 @@ services:
     
     # QuestStep Repository binding
     App\Quest\Domain\Repository\QuestStepRepositoryInterface:
-        class: App\Quest\Infrastructure\Repository\DoctrineQuestStepRepository
+        class: App\Quest\Infrastructure\Db\DoctrineQuestStepRepository
     
     # UserProgress Repository binding
     App\UserProgress\Domain\Repository\UserQuestProgressRepositoryInterface:
