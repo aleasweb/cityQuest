@@ -94,5 +94,23 @@ frontend-clean: ## Clean frontend build
 	rm -rf frontend/web/dist
 	rm -rf frontend/web/node_modules
 
+##—————————————————————————————— Mobile (Flutter)
+FLUTTER_SDK = ~/flutter/bin/flutter
+DART_SDK = ~/flutter/bin/dart
+
+mobile-install: ## Install mobile dependencies and generate code
+	cd mobile && $(FLUTTER_SDK) clean
+	cd mobile && $(FLUTTER_SDK) pub get
+	cd mobile && $(DART_SDK) run build_runner build --delete-conflicting-outputs
+
+mobile-run-android: ## Run mobile app on Android (Debug)
+	cd mobile && $(FLUTTER_SDK) run -d emulator-5554 --dart-define=API_BASE_URL=http://10.0.2.2 --dart-define=API_HOST_HEADER=cityquest.test
+
+mobile-build-apk: ## Build Android APK (Release)
+	cd mobile && $(FLUTTER_SDK) build apk --release
+
+mobile-run-ios: ## Run mobile app on iOS Simulator (Debug)
+	cd mobile && $(FLUTTER_SDK) run -d ios --dart-define=API_BASE_URL=http://localhost --dart-define=API_HOST_HEADER=cityquest.test
+
 deploy: frontend-build restart ## Build frontend and restart containers
 	@echo "✅ Deployed!"
