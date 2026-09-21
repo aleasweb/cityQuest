@@ -1,0 +1,203 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\UserProgress\Presentation\Controller;
+
+use App\Shared\Authentication\Trait\AuthenticationTrait;
+use App\User\Domain\Entity\User;
+use App\UserProgress\Application\Service\UserProgressService;
+use App\UserProgress\Domain\ValueObject\QuestStatus;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Uid\Uuid;
+
+#[Route('/api/user/progress', name: 'api_user_progress_')]
+class UserProgressController extends AbstractController
+{
+    use AuthenticationTrait;
+    
+    public function __construct(
+        private readonly UserProgressService $progressService
+    ) {
+    }
+
+    /**
+     * GET /api/user/progress?status=active
+     */
+    #[Route('', name: 'get', methods: ['GET'])]
+    public function getUserProgress(Request $request): JsonResponse
+    {
+        $user = $this->getAuthenticatedUserOr401Response();
+        if ($user instanceof JsonResponse) {
+            return $user;
+        }
+        assert($user instanceof User);
+        $userId = $user->getId();
+
+        $status = $request->query->get('status');
+
+        // Validate status
+        if ($status !== null && !in_array($status, QuestStatus::getValues())) {
+            return $this->json([
+                'error' => 'Invalid status. Must be one of: active, paused, completed'
+            ], Response::HTTP_BAD_REQUEST);
+        }
+
+        $result = $this->progressService->getUserProgress($userId, $status);
+
+        return $this->json($result);
+    }
+
+    /**
+     * Start a quest
+     * 
+     * POST /api/user/progress/{questId}/start
+     */
+    #[Route('/{questId}/start', name: 'start', methods: ['POST'])]
+    public function startQuest(string $questId): JsonResponse
+    {
+        $user = $this->getAuthenticatedUserOr401Response();
+        if ($user instanceof JsonResponse) {
+            return $user;
+        }
+        assert($user instanceof User);
+        
+        $userId = $user->getId();
+        $questUuid = Uuid::fromString($questId);
+
+        $progress = $this->progressService->startQuest($userId, $questUuid);
+
+        return $this->json([
+            'message' => 'Quest started successfully',
+            'data' => $progress->toArray(),
+        ], Response::HTTP_CREATED);
+    }
+
+    /**
+     * Pause an active quest
+     * 
+     * PATCH /api/user/progress/{questId}/pause
+     */
+    #[Route('/{questId}/pause', name: 'pause', methods: ['PATCH'])]
+    public function pauseQuest(Request $request, string $questId): JsonResponse
+    {
+        $user = $this->getAuthenticatedUserOr401Response();
+        if ($user instanceof JsonResponse) {
+            return $user;
+        }
+        assert($user instanceof User);
+        
+        $userId = $user->getId();
+        $questUuid = Uuid::fromString($questId);
+
+        $progress = $this->progressService->pauseQuest($userId, $questUuid);
+
+        return $this->json([
+            'message' => 'Quest paused successfully',
+            'data' => $progress->toArray(),
+        ]);
+    }
+
+    /**
+     * Complete an active quest
+     * 
+     * PATCH /api/user/progress/{questId}/complete
+     */
+    #[Route('/{questId}/complete', name: 'complete', methods: ['PATCH'])]
+    public function completeQuest(Request $request, string $questId): JsonResponse
+    {
+        $user = $this->getAuthenticatedUserOr401Response();
+        if ($user instanceof JsonResponse) {
+            return $user;
+        }
+        assert($user instanceof User);
+        
+        $userId = $user->getId();
+        $questUuid = Uuid::fromString($questId);
+
+        $progress = $this->progressService->completeQuest($userId, $questUuid);
+
+        return $this->json([
+            'message' => 'Quest completed successfully',
+            'data' => $progress->toArray(),
+        ]);
+    }
+
+    /**
+     * Check quest step geolocation
+     * 
+     * POST /api/user/progress/{questId}/check
+     */
+    #[Route('/{questId}/check', name: 'check', methods: ['POST'])]
+    public function checkQuestStep(Request $request, string $questId): JsonResponse
+    {
+        $user = $this->getAuthenticatedUserOr401Response();
+        if ($user instanceof JsonResponse) {
+            return $user;
+        }
+        assert($user instanceof User);
+        
+        $userId = $user->getId();
+        $questUuid = Uuid::fromString($questId);
+
+        $data = json_decode($request->getContent(), true);
+        
+        if (!isset($data['latitude']) || !isset($data['longitude'])) {
+            return $this->json([
+                'error' => 'Latitude and longitude are required'
+            ], Response::HTTP_BAD_REQUEST);
+        }
+
+        $latitude = (float) $data['latitude'];
+        $longitude = (float) $data['longitude'];
+
+        if ($latitude < -90 || $latitude > 90 || $longitude < -180 || $longitude > 180) {
+            return $this->json([
+                'error' => 'Invalid coordinates'
+            ], Response::HTTP_BAD_REQUEST);
+        }
+
+        $result = $this->progressService->checkQuestStep($userId, $questUuid, $latitude, $longitude);
+
+        if (!$result['success']) {
+            return $this->json([
+                'success' => false,
+                'error' => $result['error'],
+                'distance' => $result['distance'],
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        return $this->json([
+            'success' => true,
+            'data' => $result,
+        ]);
+    }
+
+    /**
+     * Abandon a quest (delete progress)
+     * 
+     * DELETE /api/user/progress/{questId}
+     */
+    #[Route('/{questId}', name: 'delete', methods: ['DELETE'])]
+    public function abandonQuest(Request $request, string $questId): JsonResponse
+    {
+        $user = $this->getAuthenticatedUserOr401Response();
+        if ($user instanceof JsonResponse) {
+            return $user;
+        }
+        assert($user instanceof User);
+        
+        $userId = $user->getId();
+        $questUuid = Uuid::fromString($questId);
+
+        $this->progressService->abandonQuest($userId, $questUuid);
+
+        return $this->json([
+            'message' => 'Quest abandoned successfully',
+        ]);
+    }
+}

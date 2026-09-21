@@ -5,7 +5,7 @@
 
 ## 1. Обзор архитектуры (DDD)
 
-Домен реализован в соответствии с принципами Domain-Driven Design (DDD) и располагается в `project/src/User/` (физически разделяя директорию с доменом `auth`).
+Домен реализован в соответствии с принципами Domain-Driven Design (DDD) и располагается в `backend/src/User/` (физически разделяя директорию с доменом `auth`).
 
 **Слои:**
 - **Domain:** Сущность `User` (агрегат), интерфейс `UserRepositoryInterface`, доменные исключения (`UserNotFoundException`, `UserAlreadyExistsException`).

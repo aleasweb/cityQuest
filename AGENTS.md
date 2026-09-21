@@ -17,7 +17,7 @@
 ## Структура
 
 ```
-project/src/          # Backend (DDD)
+backend/src/          # Backend (DDD)
   User/               # Auth, профиль
   Quest/              # Квесты, лайки
   UserProgress/       # Прогресс + Event Sourcing

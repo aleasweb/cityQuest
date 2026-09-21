@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS user_quest_progress (
     CONSTRAINT fk_user_quest_progress_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_user_quest_progress_quest FOREIGN KEY (quest_id) REFERENCES quests(id) ON DELETE CASCADE,
     CONSTRAINT unique_user_quest UNIQUE (user_id, quest_id),
-    CONSTRAINT check_status CHECK (status IN ('active', 'paused', 'completed'))
+    CONSTRAINT check_status CHECK (status IN ('new', 'active', 'paused', 'completed'))
 );
 
 COMMENT ON COLUMN user_quest_progress.id IS '(DC2Type:uuid)';
@@ -78,6 +78,23 @@ COMMENT ON COLUMN user_quest_progress.updated_at IS '(DC2Type:datetime_immutable
 -- Индексы для user_quest_progress
 CREATE INDEX IF NOT EXISTS idx_user_status ON user_quest_progress(user_id, status);
 CREATE INDEX IF NOT EXISTS idx_quest ON user_quest_progress(quest_id);
+
+-- Таблица событий прогресса (Event Sourcing)
+CREATE TABLE IF NOT EXISTS domain_events_progress (
+    aggregate_id UUID NOT NULL,
+    user_id UUID NOT NULL,
+    quest_id UUID NOT NULL,
+    event_type VARCHAR(255) NOT NULL,
+    event_data JSONB NOT NULL,
+    platform JSONB NOT NULL,
+    occurred_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_progress_events_aggregate ON domain_events_progress(aggregate_id);
+CREATE INDEX IF NOT EXISTS idx_progress_events_user ON domain_events_progress(user_id);
+CREATE INDEX IF NOT EXISTS idx_progress_events_quest ON domain_events_progress(quest_id);
+CREATE INDEX IF NOT EXISTS idx_progress_events_type ON domain_events_progress(event_type);
+CREATE INDEX IF NOT EXISTS idx_progress_events_occurred ON domain_events_progress(occurred_at);
 
 -- Таблица лайков квестов
 CREATE TABLE IF NOT EXISTS quest_likes (

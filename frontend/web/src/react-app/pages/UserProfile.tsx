@@ -163,7 +163,7 @@ export default function UserProfile() {
             </>
           ) : (
             <p className="text-gray-600 dark:text-gray-400">
-              Вы еще не проходили квесты. Начните свое приключение!
+              Вы еще не прошли ни одного квеста. Начните свое приключение!
             </p>
           )}
         </div>
