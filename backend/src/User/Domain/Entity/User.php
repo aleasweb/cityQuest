@@ -17,7 +17,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ORM\UniqueConstraint(name: 'users_username_unique', columns: ['username'])]
 #[UniqueEntity(fields: ['email'], message: 'This email is already registered')]
 #[UniqueEntity(fields: ['username'], message: 'This username is already taken')]
-class User implements UserInterface, PasswordAuthenticatedUserInterface
+final class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
     #[ORM\Id]
     #[ORM\Column(type: 'uuid', unique: true)]

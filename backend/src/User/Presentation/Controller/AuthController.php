@@ -16,7 +16,7 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 #[Route('/api/auth', name: 'api_auth_')]
-class AuthController extends AbstractController
+final class AuthController extends AbstractController
 {
     public function __construct(
         private AuthenticationService $authenticationService,

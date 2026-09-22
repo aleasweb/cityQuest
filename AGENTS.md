@@ -45,8 +45,6 @@ openspec/             # Спецификации и изменения
 ### Backend (PHP)
 - PSR-12, `strict_types`, `final` классы по умолчанию
 - PHPStan Level 5; PHP-CS-Fixer
-- Domain Layer — без зависимостей на Symfony/Doctrine (исключение: атрибуты `#[ORM\...]` в доменных сущностях)
-- Domain exceptions наследуют `\DomainException`
 - Миграции Doctrine **обязательно** синхронизировать с `data/init-db/cityquest.sql`
 
 ### Frontend (TS)

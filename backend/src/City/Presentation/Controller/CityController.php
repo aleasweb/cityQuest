@@ -9,7 +9,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
 
 #[Route('/api/cities')]
-class CityController extends AbstractController
+final class CityController extends AbstractController
 {
     #[Route('', name: 'api_cities_list', methods: ['GET'])]
     public function getCities(): JsonResponse

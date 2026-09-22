@@ -65,8 +65,9 @@ abstract class AbstractUserQuestProgressEvent implements DomainEventInterface
 
     public function withPlatform(Platform $platform): self
     {
-        $this->platform = $platform;
-        return $this;
+        $clone = clone $this;
+        $clone->platform = $platform;
+        return $clone;
     }
 
     /**

@@ -16,7 +16,7 @@ use Symfony\Component\Uid\Uuid;
 #[ORM\UniqueConstraint(name: 'quest_steps_quest_number_unique', columns: ['quest_id', 'number'])]
 #[ORM\Index(name: 'idx_quest_steps_quest_id', columns: ['quest_id'])]
 #[ORM\Index(name: 'idx_quest_steps_status', columns: ['status'])]
-class QuestStep
+final class QuestStep
 {
     #[ORM\Id]
     #[ORM\Column(type: 'integer')]

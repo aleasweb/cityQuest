@@ -17,7 +17,7 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Uid\Uuid;
 
 #[Route('/api/user/progress', name: 'api_user_progress_')]
-class UserProgressController extends AbstractController
+final class UserProgressController extends AbstractController
 {
     use AuthenticationTrait;
     

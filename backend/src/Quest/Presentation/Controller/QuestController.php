@@ -21,7 +21,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Uid\Uuid;
 
-class QuestController extends AbstractController
+final class QuestController extends AbstractController
 {
     public function __construct(
         private QuestService $questService,

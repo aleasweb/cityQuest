@@ -10,7 +10,7 @@ use App\Quest\Domain\ValueObject\QuestType;
 
 #[ORM\Entity]
 #[ORM\Table(name: 'quests')]
-class Quest
+final class Quest
 {
     #[ORM\Id]
     #[ORM\Column(type: 'uuid', unique: true)]

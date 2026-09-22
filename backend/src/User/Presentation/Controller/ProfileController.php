@@ -17,7 +17,7 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
-class ProfileController extends AbstractController
+final class ProfileController extends AbstractController
 {
     public function __construct(
         private ProfileService $profileService,

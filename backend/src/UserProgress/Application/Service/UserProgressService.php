@@ -20,7 +20,7 @@ use App\UserProgress\Domain\Repository\ProgressEventStoreInterface;
 use App\UserProgress\Domain\Repository\UserQuestProgressRepositoryInterface;
 use Symfony\Component\Uid\Uuid;
 
-class UserProgressService
+final class UserProgressService
 {
     public function __construct(
         private readonly UserQuestProgressRepositoryInterface $progressRepository,
@@ -276,7 +276,7 @@ class UserProgressService
 
         /** @var AbstractUserQuestProgressEvent $event */
         foreach ($events as $event) {
-            $event->withPlatform($platform);
+            $event = $event->withPlatform($platform);
             $this->eventStore->store($event);
         }
     }
