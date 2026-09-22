@@ -21,6 +21,7 @@ final class QuestStep
     #[ORM\Id]
     #[ORM\Column(type: 'integer')]
     #[ORM\GeneratedValue(strategy: 'IDENTITY')]
+    /** @phpstan-ignore-next-line */
     private int $id;
 
     #[ORM\Column(type: 'uuid')]

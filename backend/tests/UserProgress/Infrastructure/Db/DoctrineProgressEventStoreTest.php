@@ -196,7 +196,10 @@ class DoctrineProgressEventStoreTest extends KernelTestCase
 
         // Assert
         $this->assertCount(1, $events);
-        $this->assertEquals($this->userId, $events[0]->getUserId());
+        
+        /** @var \App\UserProgress\Domain\Event\AbstractUserQuestProgressEvent $retrievedEvent */
+        $retrievedEvent = $events[0];
+        $this->assertEquals($this->userId, $retrievedEvent->getUserId());
     }
 
     /**
@@ -231,7 +234,10 @@ class DoctrineProgressEventStoreTest extends KernelTestCase
 
         // Assert
         $this->assertCount(1, $events);
-        $this->assertEquals($this->questId, $events[0]->getQuestId());
+        
+        /** @var \App\UserProgress\Domain\Event\AbstractUserQuestProgressEvent $retrievedEvent */
+        $retrievedEvent = $events[0];
+        $this->assertEquals($this->questId, $retrievedEvent->getQuestId());
     }
 
     /**

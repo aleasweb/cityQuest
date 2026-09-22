@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\User\Infrastructure\EventSubscriber;
 
+use App\User\Domain\Entity\User;
 use Lexik\Bundle\JWTAuthenticationBundle\Event\AuthenticationSuccessEvent;
 use Lexik\Bundle\JWTAuthenticationBundle\Events;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -25,6 +26,10 @@ class JWTAuthenticationSubscriber implements EventSubscriberInterface
     {
         $user = $event->getUser();
         $data = $event->getData();
+
+        if (!$user instanceof User) {
+            return;
+        }
 
         // Add user data to response
         $data['user'] = [

@@ -6,6 +6,7 @@ namespace App\User\Presentation\Controller;
 
 use App\User\Application\DTO\RegisterUserRequest;
 use App\User\Application\Service\AuthenticationService;
+use App\User\Domain\Entity\User;
 use App\User\Domain\Exception\UserAlreadyExistsException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Cookie;
@@ -117,7 +118,7 @@ final class AuthController extends AbstractController
     {
         $user = $this->getUser();
         
-        if (!$user) {
+        if (!$user instanceof User) {
             return $this->json(
                 ['error' => 'Unauthorized', 'message' => 'Valid JWT token required'],
                 Response::HTTP_UNAUTHORIZED

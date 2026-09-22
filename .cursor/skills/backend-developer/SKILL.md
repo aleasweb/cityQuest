@@ -13,3 +13,8 @@
 ## Правила наследования exception
 
 - Domain exceptions наследуют `\DomainException`
+
+## Правила импорта классов (use)
+
+- Вместо указания полных путей (FQCN) в коде (например, `\App\User\Domain\Entity\User`), всегда выносите их в секцию `use`.
+- Исключение: глобальные встроенные классы PHP (например, `\Exception`, `\DateTimeImmutable`, `\LogicException`) можно использовать с ведущим слешем без импорта.

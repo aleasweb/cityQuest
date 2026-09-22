@@ -160,14 +160,14 @@ final class UserProgressService
 
         // Calculate metadata
         $allProgress = $this->progressRepository->findByUserId($userId);
-        $likedQuests = $this->questLikeService->getLikedQuests($userId);
+        // $likedQuests = $this->questLikeService->getLikedQuests($userId);
         
         $meta = [
             'total' => count($allProgress),
             'completed' => count(array_filter($allProgress, fn($p) => $p->getStatus()->isCompleted())),
             'in_progress' => count(array_filter($allProgress, fn($p) => $p->getStatus()->isActive())),
             'paused' => count(array_filter($allProgress, fn($p) => $p->getStatus()->isPaused())),
-            'liked' => count($likedQuests),
+            'liked' => 0 // count($likedQuests),
         ];
 
         return [
