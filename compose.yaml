@@ -7,7 +7,7 @@ services:
         - PHP_VERSION=${PHP_VERSION}
         - XDEBUG_VERSION=${XDEBUG_VERSION}
     volumes:
-      - ./project:/app
+      - ./backend:/app
       - composer:/root/.composer/cache
     environment:
       PHP_IDE_CONFIG: "serverName=Docker"
@@ -25,7 +25,7 @@ services:
     build:
       context: ./docker/nginx
     volumes:
-      - ./project:/app
+      - ./backend:/app
       - ./frontend/web/dist:/app/frontend/dist:ro
     environment:
       VIRTUAL_HOST: ${NGINX_VIRTUAL_HOST}

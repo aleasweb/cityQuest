@@ -21,8 +21,7 @@ RUN DEBIAN_FRONTEND=noninteractive \
     libxml2-dev
 
 # Extentions
-RUN docker-php-ext-configure pdo_mysql --with-pdo-mysql=mysqlnd && \
-    docker-php-ext-install -j$(nproc) \
+RUN docker-php-ext-install -j$(nproc) \
     iconv \
     exif \
     bcmath \
@@ -30,7 +29,6 @@ RUN docker-php-ext-configure pdo_mysql --with-pdo-mysql=mysqlnd && \
     sockets \
     mbstring \
     \
-    pdo_mysql \
     pdo_pgsql \
     pdo_sqlite \
     intl \

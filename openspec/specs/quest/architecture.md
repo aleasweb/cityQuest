@@ -4,7 +4,7 @@
 
 ## 1. Обзор архитектуры (DDD)
 
-Домен располагается в `project/src/Quest/` и следует принципам DDD.
+Домен располагается в `backend/src/Quest/` и следует принципам DDD.
 
 **Слои:**
 - **Domain:** Сущность `Quest`, интерфейсы репозиториев (`QuestRepositoryInterface`), доменные исключения (например, `QuestNotFoundException`).

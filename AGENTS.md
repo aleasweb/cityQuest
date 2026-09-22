@@ -17,7 +17,7 @@
 ## Структура
 
 ```
-project/src/          # Backend (DDD)
+backend/src/          # Backend (DDD)
   User/               # Auth, профиль
   Quest/              # Квесты, лайки
   UserProgress/       # Прогресс + Event Sourcing
@@ -45,8 +45,6 @@ openspec/             # Спецификации и изменения
 ### Backend (PHP)
 - PSR-12, `strict_types`, `final` классы по умолчанию
 - PHPStan Level 5; PHP-CS-Fixer
-- Domain Layer — без зависимостей на Symfony/Doctrine
-- Domain exceptions наследуют `\DomainException`
 - Миграции Doctrine **обязательно** синхронизировать с `data/init-db/cityquest.sql`
 
 ### Frontend (TS)

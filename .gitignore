@@ -6,6 +6,6 @@
 
 # Frontend build artifacts
 /frontend/web/dist/
-/project/frontend/dist/
+/backend/frontend/dist/
 /frontend/web/node_modules/
 .flutter-sdk

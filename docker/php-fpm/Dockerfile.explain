@@ -19,10 +19,6 @@ RUN docker-php-ext-install -j$(nproc) \
     sockets \
     mbstring
 
-# MySQL
-RUN docker-php-ext-configure pdo_mysql --with-pdo-mysql=mysqlnd && \
-    docker-php-ext-install   pdo_mysql
-
 # PostgreSQL
 RUN apt-get update && apt-get install -yq --no-install-recommends libpq-dev && \
     docker-php-ext-install pdo_pgsql

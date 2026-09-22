@@ -4,7 +4,7 @@
 
 ## 1. Обзор архитектуры (DDD)
 
-Домен реализован в соответствии с принципами Domain-Driven Design (DDD) и располагается в `project/src/UserProgress/`.
+Домен реализован в соответствии с принципами Domain-Driven Design (DDD) и располагается в `backend/src/UserProgress/`.
 
 **Слои:**
 - **Domain:** Содержит агрегат `UserQuestProgress`, Value Object `QuestStatus`, доменные события (наследуют `AbstractUserQuestProgressEvent`), интерфейсы репозиториев (`UserQuestProgressRepositoryInterface`, `ProgressEventStoreInterface`) и исключения (`ProgressNotFoundException`, `ActiveQuestExistsException`, `InvalidQuestStatusException`).
