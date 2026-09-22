@@ -66,7 +66,7 @@ class AuthControllerTest extends WebTestCase
         
         $data = json_decode($client->getResponse()->getContent(), true);
         $this->assertArrayHasKey('error', $data);
-        $this->assertStringContainsString('duplicate@example.com', $data['error']);
+        $this->assertStringContainsString('User already exists', $data['error']);
     }
 
     public function testRegistrationWithExistingUsername(): void
@@ -97,7 +97,7 @@ class AuthControllerTest extends WebTestCase
         
         $data = json_decode($client->getResponse()->getContent(), true);
         $this->assertArrayHasKey('error', $data);
-        $this->assertStringContainsString('duplicateuser', $data['error']);
+        $this->assertStringContainsString('User already exists', $data['error']);
     }
 
     public function testRegistrationWithInvalidEmail(): void

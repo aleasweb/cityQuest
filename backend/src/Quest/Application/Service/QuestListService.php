@@ -10,7 +10,7 @@ use Symfony\Component\Uid\Uuid;
 /**
  * Service for retrieving quest lists
  */
-class QuestListService
+final class QuestListService
 {
     public function __construct(
         private readonly QuestRepositoryInterface $questRepository
@@ -114,13 +114,4 @@ class QuestListService
         ];
     }
 
-    /**
-     * Get a single quest by ID
-     */
-    public function getQuestById(Uuid $id): ?array
-    {
-        $quest = $this->questRepository->findById($id);
-        
-        return $quest?->toArray();
-    }
 }

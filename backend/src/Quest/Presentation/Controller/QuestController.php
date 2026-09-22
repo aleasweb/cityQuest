@@ -7,6 +7,7 @@ namespace App\Quest\Presentation\Controller;
 use App\Quest\Application\Service\QuestService;
 use App\Quest\Application\Service\QuestListService;
 use App\Quest\Application\Service\QuestLikeService;
+use App\Quest\Application\Service\QuestEnricher;
 use App\Quest\Domain\Exception\QuestNotFoundException;
 use App\Quest\Domain\Repository\QuestRepositoryInterface;
 use App\User\Domain\Entity\User;
@@ -26,10 +27,20 @@ class QuestController extends AbstractController
         private QuestService $questService,
         private QuestLikeService $questLikeService,
         private QuestListService $questListService,
+        private QuestEnricher $questEnricher,
         private QuestRepositoryInterface $questRepository,
         private UserRepositoryInterface $userRepository,
         private UserQuestProgressRepositoryInterface $progressRepository,
     ) {
+    }
+
+    private function getCurrentUser(): ?User
+    {
+        $securityUser = $this->getUser();
+        if (!$securityUser) {
+            return null;
+        }
+        return $this->userRepository->findByUsername($securityUser->getUserIdentifier());
     }
 
     /**
@@ -62,33 +73,8 @@ class QuestController extends AbstractController
 
         $result = $this->questListService->getQuests($filters, $sortField, $sortDirection, $limit, $offset);
 
-        // Получаем текущего пользователя для проверки лайков
-        $securityUser = $this->getUser();
-        $likedMap = [];
-        if ($securityUser) {
-            $user = $this->userRepository->findByUsername($securityUser->getUserIdentifier());
-            if ($user) {
-                // Собираем все quest_id для batch-запроса
-                $questIds = array_map(
-                    fn($quest) => \Symfony\Component\Uid\Uuid::fromString($quest['id']),
-                    $result['data']
-                );
-                // Один запрос для всех квестов
-                $likedMap = $this->questLikeService->getLikedStatusMap($user->getId(), $questIds);
-            }
-        }
-        
-        // Получаем маппинг городов и преобразуем названия
-        $cities = $this->getParameter('app.cities');
-        foreach ($result['data'] as &$quest) {
-            if (isset($quest['city']) && isset($cities[$quest['city']])) {
-                $quest['city'] = $cities[$quest['city']];
-            }
-            
-            // Добавляем isLikedByCurrentUser из предварительно загруженного map
-            $quest['isLikedByCurrentUser'] = $likedMap[$quest['id']] ?? false;
-        }
-        
+        $result['data'] = $this->questEnricher->enrichList($result['data'], $this->getCurrentUser());
+
         return $this->json($result);
     }
 
@@ -117,33 +103,8 @@ class QuestController extends AbstractController
         
         $result = $this->questListService->getNearbyQuests($lat, $lng, $radius, $limit);
         
-        // Получаем текущего пользователя для проверки лайков
-        $securityUser = $this->getUser();
-        $likedMap = [];
-        if ($securityUser) {
-            $user = $this->userRepository->findByUsername($securityUser->getUserIdentifier());
-            if ($user) {
-                // Собираем все quest_id для batch-запроса
-                $questIds = array_map(
-                    fn($quest) => \Symfony\Component\Uid\Uuid::fromString($quest['id']),
-                    $result['data']
-                );
-                // Один запрос для всех квестов
-                $likedMap = $this->questLikeService->getLikedStatusMap($user->getId(), $questIds);
-            }
-        }
-        
-        // Получаем маппинг городов и преобразуем названия
-        $cities = $this->getParameter('app.cities');
-        foreach ($result['data'] as &$quest) {
-            if (isset($quest['city']) && isset($cities[$quest['city']])) {
-                $quest['city'] = $cities[$quest['city']];
-            }
-            
-            // Добавляем isLikedByCurrentUser из предварительно загруженного map
-            $quest['isLikedByCurrentUser'] = $likedMap[$quest['id']] ?? false;
-        }
-        
+        $result['data'] = $this->questEnricher->enrichList($result['data'], $this->getCurrentUser());
+
         return $this->json($result);
     }
 
@@ -154,39 +115,20 @@ class QuestController extends AbstractController
     #[Route('/api/quests/{id}', name: 'api_quests_get', methods: ['GET'])]
     public function getQuest(string $id): JsonResponse
     {
-        // Валидация UUID формата (выбросит InvalidArgumentException)
-        $questId = Uuid::fromString($id);
+        try {
+            $questId = Uuid::fromString($id);
+        } catch (\InvalidArgumentException) {
+            return $this->json(['error' => 'Invalid quest ID format'], Response::HTTP_BAD_REQUEST);
+        }
 
-        $quest = $this->questService->getQuestById($questId);
-        
-        // Преобразуем название города
-        $cities = $this->getParameter('app.cities');
-        if ($quest && isset($quest['city']) && isset($cities[$quest['city']])) {
-            $quest['city'] = $cities[$quest['city']];
+        try {
+            $quest = $this->questService->getQuestById($questId);
+        } catch (QuestNotFoundException) {
+            return $this->json(['error' => 'Quest not found'], Response::HTTP_NOT_FOUND);
         }
-        
-        // Проверяем статус квеста для текущего пользователя
-        $securityUser = $this->getUser();
-        if ($securityUser) {
-            // Получаем полный User entity из репозитория
-            $user = $this->userRepository->findByUsername($securityUser->getUserIdentifier());
-            if ($user) {
-                $progress = $this->progressRepository->findByUserIdAndQuestId($user->getId(), $questId);
-                $quest['isStartedByCurrentUser'] = $progress !== null;
-                $quest['isLikedByCurrentUser'] = $this->questLikeService->isLiked($user->getId(), $questId);
-                $quest['questStatus'] = $progress?->getStatus()->value ?? null;
-            } else {
-                $quest['isStartedByCurrentUser'] = false;
-                $quest['isLikedByCurrentUser'] = false;
-                $quest['questStatus'] = null;
-            }
-        } else {
-            $quest['isStartedByCurrentUser'] = false;
-            $quest['isLikedByCurrentUser'] = false;
-            $quest['questStatus'] = null;
-        }
-        
-        // Оборачиваем в data для консистентности с другими endpoints
+
+        $quest = $this->questEnricher->enrichSingle($quest, $this->getCurrentUser());
+
         return $this->json(['data' => $quest]);
     }
 
@@ -200,19 +142,10 @@ class QuestController extends AbstractController
     {
         $questId = Uuid::fromString($id);
 
-        $securityUser = $this->getUser();
-        if (!$securityUser) {
-            return $this->json(
-                ['error' => 'Authentication required'],
-                Response::HTTP_UNAUTHORIZED
-            );
-        }
-        
-        // Получаем полный User entity из репозитория
-        $user = $this->userRepository->findByUsername($securityUser->getUserIdentifier());
+        $user = $this->getCurrentUser();
         if (!$user) {
             return $this->json(
-                ['error' => 'User not found'],
+                ['error' => 'Authentication required'],
                 Response::HTTP_UNAUTHORIZED
             );
         }
@@ -220,13 +153,13 @@ class QuestController extends AbstractController
         // Сначала проверяем существование квеста
         $quest = $this->questRepository->findById($questId);
         if (!$quest) {
-            throw QuestNotFoundException::withId($questId);
+            return $this->json(['error' => 'Quest not found'], Response::HTTP_NOT_FOUND);
         }
 
         // Затем проверяем что квест есть в прогрессе пользователя (в любом статусе: active, paused, completed)
         $progress = $this->progressRepository->findByUserIdAndQuestId($user->getId(), $questId);
         if (!$progress) {
-            throw QuestNotStartedException::forQuest($questId);
+            return $this->json(['error' => "Quest must be in progress to be liked"], Response::HTTP_FORBIDDEN);
         }
 
         $result = $this->questLikeService->toggleLike($user->getId(), $questId);

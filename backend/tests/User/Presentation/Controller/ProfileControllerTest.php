@@ -116,7 +116,7 @@ class ProfileControllerTest extends WebTestCase
 
         $data = json_decode($client->getResponse()->getContent(), true);
         $this->assertArrayHasKey('error', $data);
-        $this->assertStringContainsString('nonexistentuser999', $data['error']);
+        $this->assertStringContainsString('User not found', $data['error']);
     }
 
     // ========== UPDATE PROFILE TESTS ==========
@@ -165,7 +165,7 @@ class ProfileControllerTest extends WebTestCase
 
         $data = json_decode($client->getResponse()->getContent(), true);
         $this->assertArrayHasKey('error', $data);
-        $this->assertStringContainsString('first1@example.com', $data['error']);
+        $this->assertStringContainsString('User already exists', $data['error']);
     }
 
     public function testUpdateProfileWithInvalidEmail(): void

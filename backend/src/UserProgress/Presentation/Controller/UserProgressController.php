@@ -7,6 +7,7 @@ namespace App\UserProgress\Presentation\Controller;
 use App\Shared\Authentication\Trait\AuthenticationTrait;
 use App\User\Domain\Entity\User;
 use App\UserProgress\Application\Service\UserProgressService;
+use App\UserProgress\Domain\Exception\ActiveQuestExistsException;
 use App\UserProgress\Domain\ValueObject\QuestStatus;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -69,7 +70,11 @@ class UserProgressController extends AbstractController
         $userId = $user->getId();
         $questUuid = Uuid::fromString($questId);
 
-        $progress = $this->progressService->startQuest($userId, $questUuid);
+        try {
+            $progress = $this->progressService->startQuest($userId, $questUuid);
+        } catch (ActiveQuestExistsException) {
+            return $this->json(['error' => 'User already has an active quest. Pause it before starting a new one.'], Response::HTTP_CONFLICT);
+        }
 
         return $this->json([
             'message' => 'Quest started successfully',

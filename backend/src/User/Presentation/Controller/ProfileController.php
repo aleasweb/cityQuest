@@ -54,7 +54,7 @@ class ProfileController extends AbstractController
 
             return $this->json($profile);
         } catch (UserNotFoundException $e) {
-            return $this->json(['error' => $e->getMessage()], Response::HTTP_NOT_FOUND);
+            return $this->json(['error' => 'User not found'], Response::HTTP_NOT_FOUND);
         }
     }
 
@@ -98,7 +98,7 @@ class ProfileController extends AbstractController
                 'user' => $profile,
             ]);
         } catch (UserAlreadyExistsException $e) {
-            return $this->json(['error' => $e->getMessage()], Response::HTTP_CONFLICT);
+            return $this->json(['error' => 'User already exists'], Response::HTTP_CONFLICT);
         } catch (\Exception $e) {
             return $this->json(
                 ['error' => 'An error occurred while updating profile'],

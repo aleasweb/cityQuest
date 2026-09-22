@@ -65,7 +65,7 @@ class AuthController extends AbstractController
                 ],
             ], Response::HTTP_CREATED);
         } catch (UserAlreadyExistsException $e) {
-            return $this->json(['error' => $e->getMessage()], Response::HTTP_CONFLICT);
+            return $this->json(['error' => 'User already exists'], Response::HTTP_CONFLICT);
         } catch (\Exception $e) {
             return $this->json(
                 ['error' => 'An error occurred during registration'],

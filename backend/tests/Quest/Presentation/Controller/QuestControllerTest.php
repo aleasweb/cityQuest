@@ -74,8 +74,7 @@ class QuestControllerTest extends WebTestCase
         
         $data = json_decode($client->getResponse()->getContent(), true);
         $this->assertArrayHasKey('error', $data);
-        $this->assertStringContainsString('Quest with id', $data['error']);
-        $this->assertStringContainsString('not found', $data['error']);
+        $this->assertStringContainsString('Quest not found', $data['error']);
     }
 
     public function testGetQuestReturnsBadRequestForInvalidUuid(): void

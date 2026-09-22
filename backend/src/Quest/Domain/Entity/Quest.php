@@ -6,6 +6,7 @@ namespace App\Quest\Domain\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
+use App\Quest\Domain\ValueObject\QuestType;
 
 #[ORM\Entity]
 #[ORM\Table(name: 'quests')]
@@ -51,8 +52,8 @@ class Quest
     #[ORM\Column(type: 'float', nullable: true)]
     private ?float $longitude = null;
 
-    #[ORM\Column(type: 'string', length: 20, options: ['default' => 'linear'])]
-    private string $type = 'linear';
+    #[ORM\Column(type: 'string', length: 20, enumType: QuestType::class, options: ['default' => 'linear'])]
+    private QuestType $type = QuestType::LINEAR;
 
     #[ORM\Column(type: 'datetime_immutable')]
     private \DateTimeImmutable $createdAt;
@@ -199,12 +200,12 @@ class Quest
         $this->updatedAt = new \DateTimeImmutable();
     }
 
-    public function getType(): string
+    public function getType(): QuestType
     {
         return $this->type;
     }
 
-    public function setType(string $type): void
+    public function setType(QuestType $type): void
     {
         $this->type = $type;
         $this->updatedAt = new \DateTimeImmutable();
@@ -241,7 +242,7 @@ class Quest
             'isPopular' => $this->isPopular,
             'latitude' => $this->latitude,
             'longitude' => $this->longitude,
-            'type' => $this->type,
+            'type' => $this->type->value,
             'createdAt' => $this->createdAt->format('Y-m-d H:i:s'),
             'updatedAt' => $this->updatedAt->format('Y-m-d H:i:s'),
         ];
