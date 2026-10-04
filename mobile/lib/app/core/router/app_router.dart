@@ -6,6 +6,7 @@ import 'package:mobile/app/features/auth/presentation/screens/login_screen.dart'
 import 'package:mobile/app/features/auth/presentation/screens/register_screen.dart';
 import 'package:mobile/app/features/quests/presentation/screens/home_screen.dart';
 import 'package:mobile/app/features/quests/presentation/screens/quest_detail_screen.dart';
+import 'package:mobile/app/features/quest_process/presentation/quest_process_screen.dart';
 import 'package:mobile/app/features/quests/presentation/screens/nearby/nearby_quests_screen.dart';
 import 'package:mobile/app/features/progress/presentation/screens/active_quest_screen.dart';
 import 'package:mobile/app/features/profile/presentation/screens/profile_screen.dart';
@@ -17,6 +18,7 @@ class AppRoutes {
   static const home = '/home';
   static const nearby = '/nearby';
   static const questDetail = '/quest/:id';
+  static const questProcess = '/quest/:id/process';
   static const activeQuest = '/quest/:id/active';
   static const profile = '/profile';
 }
@@ -75,6 +77,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.questDetail,
         builder: (context, state) => QuestDetailScreen(questId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: AppRoutes.questProcess,
+        builder: (context, state) => QuestProcessScreen(questId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: AppRoutes.activeQuest,

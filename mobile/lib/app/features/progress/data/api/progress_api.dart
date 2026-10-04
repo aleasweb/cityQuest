@@ -27,9 +27,8 @@ class ProgressApi {
     return ProgressDto.fromJson(response.data as Map<String, dynamic>);
   }
 
-  Future<ProgressDto> abandon(String questId) async {
-    final response = await _apiClient.client.post('/api/user/progress/$questId/abandon');
-    return ProgressDto.fromJson(response.data as Map<String, dynamic>);
+  Future<void> abandon(String questId) async {
+    await _apiClient.client.delete('/api/user/progress/$questId');
   }
 
   Future<StepCheckResponseDto> checkStep(String questId, double lat, double lng) async {
