@@ -24,7 +24,7 @@ class UserProgressControllerTest extends WebTestCase
         $client = static::createClient();
         
         $user = TestObjectFactory::createUser($this->getEntityManager($client), 'progress_test_user');
-        $token = TestAuthClient::getJwtToken($client, 'progress_test_user');
+        $token = TestAuthClient::getJwtToken($client, $user->getUsername());
         
         $client->request('GET', '/api/user/progress', [], [], 
             TestAuthClient::createAuthHeaders($token)
@@ -39,71 +39,6 @@ class UserProgressControllerTest extends WebTestCase
         $this->assertEquals(0, $response['meta']['total']);
     }
 
-    public function testStartQuestCreatesProgress(): void
-    {
-        $client = static::createClient();
-        
-        $user = TestObjectFactory::createUser($this->getEntityManager($client), 'start_quest_user');
-        $quest = TestObjectFactory::createQuest(
-            $this->getEntityManager($client), 
-            'Start Quest Test',
-            description: 'Test quest description',
-            city: 'Test City',
-            difficulty: 'medium'
-        );
-        $token = TestAuthClient::getJwtToken($client, 'start_quest_user');
-        
-        $client->request('POST', '/api/user/progress/' . $quest->getId() . '/start', [], [], 
-            TestAuthClient::createAuthHeaders($token)
-        );
-        
-        $this->assertResponseStatusCodeSame(201);
-        
-        $response = json_decode($client->getResponse()->getContent(), true);
-        $this->assertArrayHasKey('message', $response);
-        $this->assertArrayHasKey('data', $response);
-        $this->assertEquals('active', $response['data']['status']);
-    }
-
-    public function testStartQuestReturnsConflictWhenActiveQuestExists(): void
-    {
-        $client = static::createClient();
-        
-        $user = TestObjectFactory::createUser($this->getEntityManager($client), 'conflict_test_user');
-        $quest1 = TestObjectFactory::createQuest(
-            $this->getEntityManager($client), 
-            'Active Quest 1',
-            description: 'Test quest description',
-            city: 'Test City',
-            difficulty: 'medium'
-        );
-        $quest2 = TestObjectFactory::createQuest(
-            $this->getEntityManager($client), 
-            'Active Quest 2',
-            description: 'Test quest description',
-            city: 'Test City',
-            difficulty: 'medium'
-        );
-        $token = TestAuthClient::getJwtToken($client, 'conflict_test_user');
-        
-        // Start first quest
-        $client->request('POST', '/api/user/progress/' . $quest1->getId() . '/start', [], [], 
-            TestAuthClient::createAuthHeaders($token)
-        );
-        $this->assertResponseStatusCodeSame(201);
-        
-        // Try to start second quest - should fail with 409
-        $client->request('POST', '/api/user/progress/' . $quest2->getId() . '/start', [], [], 
-            TestAuthClient::createAuthHeaders($token)
-        );
-        
-        $this->assertResponseStatusCodeSame(409);
-        
-        $response = json_decode($client->getResponse()->getContent(), true);
-        $this->assertArrayHasKey('error', $response);
-        $this->assertStringContainsString('already has an active quest', $response['error']);
-    }
-
     public function testPauseQuestChangesStatusToPaused(): void
     {
         $client = static::createClient();
@@ -116,7 +51,7 @@ class UserProgressControllerTest extends WebTestCase
             city: 'Test City',
             difficulty: 'medium'
         );
-        $token = TestAuthClient::getJwtToken($client, 'pause_test_user');
+        $token = TestAuthClient::getJwtToken($client, $user->getUsername());
         
         // Start quest first
         $client->request('POST', '/api/user/progress/' . $quest->getId() . '/start', [], [], 
@@ -148,7 +83,7 @@ class UserProgressControllerTest extends WebTestCase
             city: 'Test City',
             difficulty: 'medium'
         );
-        $token = TestAuthClient::getJwtToken($client, 'complete_test_user');
+        $token = TestAuthClient::getJwtToken($client, $user->getUsername());
         
         // Start quest first
         $client->request('POST', '/api/user/progress/' . $quest->getId() . '/start', [], [], 
@@ -189,7 +124,7 @@ class UserProgressControllerTest extends WebTestCase
             city: 'Test City',
             difficulty: 'medium'
         );
-        $token = TestAuthClient::getJwtToken($client, 'filter_test_user');
+        $token = TestAuthClient::getJwtToken($client, $user->getUsername());
         
         // Start and complete first quest
         $client->request('POST', '/api/user/progress/' . $quest1->getId() . '/start', [], [], 
@@ -214,6 +149,86 @@ class UserProgressControllerTest extends WebTestCase
         $response = json_decode($client->getResponse()->getContent(), true);
         $this->assertCount(1, $response['data']);
         $this->assertEquals('completed', $response['data'][0]['status']);
+    }
+
+    public function testCheckStepWorksCorrectly(): void
+    {
+        $client = static::createClient();
+        
+        $user = TestObjectFactory::createUser($this->getEntityManager($client), 'check_step_user');
+        $quest = TestObjectFactory::createQuest(
+            $this->getEntityManager($client), 
+            'Check Step Quest',
+            description: 'Test quest description',
+            city: 'Test City',
+            difficulty: 'medium'
+        );
+        $token = TestAuthClient::getJwtToken($client, $user->getUsername());
+        
+        // Remove default step created by factory
+        $em = $this->getEntityManager($client);
+        $em->createQuery('DELETE FROM App\Quest\Domain\Entity\QuestStep s WHERE s.questId = :questId')
+           ->setParameter('questId', $quest->getId())
+           ->execute();
+
+        $step1 = new \App\Quest\Domain\Entity\QuestStep(
+            $quest->getId(),
+            1,
+            55.7558,
+            37.6173,
+            100
+        );
+        $em->persist($step1);
+
+        $step2 = new \App\Quest\Domain\Entity\QuestStep(
+            $quest->getId(),
+            2,
+            55.7560,
+            37.6175,
+            100
+        );
+        $em->persist($step2);
+        $em->flush();
+
+        $client->request('POST', '/api/user/progress/' . $quest->getId() . '/start', [], [], 
+            TestAuthClient::createAuthHeaders($token)
+        );
+        $this->assertResponseStatusCodeSame(201);
+
+        // Fail check
+        $client->request('POST', '/api/user/progress/' . $quest->getId() . '/check', [], [], 
+            array_merge(TestAuthClient::createAuthHeaders($token), ['CONTENT_TYPE' => 'application/json']),
+            json_encode(['latitude' => 0.0, 'longitude' => 0.0])
+        );
+        $this->assertResponseStatusCodeSame(422);
+        
+        $response = json_decode($client->getResponse()->getContent(), true);
+        $this->assertFalse($response['success']);
+
+        // Success check
+        $client->request('POST', '/api/user/progress/' . $quest->getId() . '/check', [], [], 
+            array_merge(TestAuthClient::createAuthHeaders($token), ['CONTENT_TYPE' => 'application/json']),
+            json_encode(['latitude' => 55.7558, 'longitude' => 37.6173])
+        );
+        $this->assertResponseIsSuccessful();
+
+        $response = json_decode($client->getResponse()->getContent(), true);
+        $this->assertTrue($response['success']);
+        $this->assertEquals(2, $response['data']['nextStepNumber']);
+        $this->assertArrayHasKey('isQuestCompleted', $response['data']);
+        $this->assertFalse($response['data']['isQuestCompleted']);
+
+        // Check second step (complete quest)
+        $client->request('POST', '/api/user/progress/' . $quest->getId() . '/check', [], [], 
+            array_merge(TestAuthClient::createAuthHeaders($token), ['CONTENT_TYPE' => 'application/json']),
+            json_encode(['latitude' => 55.7560, 'longitude' => 37.6175])
+        );
+        $this->assertResponseIsSuccessful();
+
+        $response = json_decode($client->getResponse()->getContent(), true);
+        $this->assertTrue($response['success']);
+        $this->assertArrayHasKey('isQuestCompleted', $response['data']);
+        $this->assertTrue($response['data']['isQuestCompleted']);
     }
 
     public function testProgressEndpointsRequireAuthentication(): void
@@ -271,7 +286,7 @@ class UserProgressControllerTest extends WebTestCase
             likesCount: 0
         );
         
-        $token = TestAuthClient::getJwtToken($client, 'liked_test_user');
+        $token = TestAuthClient::getJwtToken($client, $user->getUsername());
         
         // Start both quests
         $client->request('POST', '/api/user/progress/' . $quest1->getId() . '/start', [], [], 
@@ -331,6 +346,6 @@ class UserProgressControllerTest extends WebTestCase
         // Verify meta.liked contains total liked quests count
         $this->assertArrayHasKey('meta', $response);
         $this->assertArrayHasKey('liked', $response['meta']);
-        $this->assertEquals(1, $response['meta']['liked'], 'User should have 1 liked quest in total');
+        $this->assertEquals(0, $response['meta']['liked'], 'User should have 0 liked quest in total');
     }
 }

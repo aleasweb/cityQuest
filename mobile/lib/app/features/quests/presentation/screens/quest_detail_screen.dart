@@ -11,6 +11,8 @@ import 'package:mobile/app/core/router/app_router.dart';
 import 'package:mobile/app/features/quests/application/quest_controller.dart';
 import 'package:mobile/app/features/quests/domain/quest_difficulty.dart';
 import 'package:mobile/app/features/auth/application/auth_controller.dart';
+import 'package:mobile/app/features/progress/application/progress_controller.dart';
+import 'package:mobile/app/features/quest_process/application/quest_process_controller.dart';
 import 'package:mobile/app/shared/widgets/toast.dart';
 
 class QuestDetailScreen extends ConsumerWidget {
@@ -95,32 +97,23 @@ class QuestDetailScreen extends ConsumerWidget {
                 const SizedBox(height: 40),
                 AppButton(
                   text: 'Начать квест',
-                  onPressed: () {
+                  onPressed: () async {
                     if (!isAuth) {
                       Toast.show(context, 'Необходимо войти в аккаунт');
                       return;
                     }
 
-                    showDialog(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        title: const Text('Начать квест?'),
-                        content: const Text('Вы готовы отправиться в приключение?'),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(ctx),
-                            child: const Text('Отмена'),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              Navigator.pop(ctx);
-                              context.push(AppRoutes.activeQuest.replaceAll(':id', questId));
-                            },
-                            child: const Text('Начать'),
-                          ),
-                        ],
-                      ),
-                    );
+                    try {
+                      await ref.read(progressRepositoryProvider).start(questId);
+                      if (context.mounted) {
+                        ref.invalidate(questProcessControllerProvider(questId));
+                        context.push(AppRoutes.questProcess.replaceAll(':id', questId));
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        Toast.show(context, e.toString());
+                      }
+                    }
                   },
                 ),
                 const SizedBox(height: 40),

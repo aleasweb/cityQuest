@@ -12,7 +12,7 @@ COMPOSER = $(PHP_CONT) composer
 
 # Misc
 .DEFAULT_GOAL = help
-.PHONY        : help install bash composer test console clean route restart rebuild build up down start stop phpstan cs-diff cs-fix composer-validate
+.PHONY        : help install bash composer test console clean route restart rebuild build up down start stop php-error phpstan cs-diff cs-fix composer-validate
 
 ##
 ##—————————————————————————————— The Symfony Docker Makefile
@@ -64,6 +64,9 @@ start: ## Start Docker containers
 
 stop: ## Stop Docker containers
 	@${DOCKER_COMP} stop
+
+php-error: ## Tail Symfony dev log (php-fpm)
+	@$(PHP_CONT) tail -f /app/var/log/dev.log
 
 ##—————————————————————————————— Static code analysis
 phpstan: ## Run the static analysis of code.

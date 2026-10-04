@@ -13,4 +13,9 @@ class QuestStepNotFoundException extends DomainException
     {
         return new self(sprintf('Not found step %s for quest "%s"', $stepNumber, (string) $questId));
     }
+
+    public static function withNoActiveStepsForQuest(Uuid $questId): self
+    {
+        return new self(sprintf('Quest "%s" has no active steps', (string) $questId));
+    }
 }

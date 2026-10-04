@@ -22,35 +22,53 @@ class ActiveProgressController extends _$ActiveProgressController {
     }
   }
 
+  Future<void> _waitForInitialBuild() async {
+    try {
+      await future;
+    } catch (_) {}
+  }
+
   Future<void> start() async {
+    await _waitForInitialBuild();
+    if (!ref.mounted) return;
     state = const AsyncLoading();
     try {
       final repository = ref.read(progressRepositoryProvider);
       final progress = await repository.start(questId);
+      if (!ref.mounted) return;
       state = AsyncData(progress);
     } catch (e, st) {
+      if (!ref.mounted) return;
       state = AsyncError(e, st);
     }
   }
 
   Future<void> pause() async {
+    await _waitForInitialBuild();
+    if (!ref.mounted) return;
     state = const AsyncLoading();
     try {
       final repository = ref.read(progressRepositoryProvider);
       final progress = await repository.pause(questId);
+      if (!ref.mounted) return;
       state = AsyncData(progress);
     } catch (e, st) {
+      if (!ref.mounted) return;
       state = AsyncError(e, st);
     }
   }
 
   Future<void> abandon() async {
+    await _waitForInitialBuild();
+    if (!ref.mounted) return;
     state = const AsyncLoading();
     try {
       final repository = ref.read(progressRepositoryProvider);
       await repository.abandon(questId);
+      if (!ref.mounted) return;
       state = const AsyncData(null);
     } catch (e, st) {
+      if (!ref.mounted) return;
       state = AsyncError(e, st);
     }
   }
@@ -58,11 +76,18 @@ class ActiveProgressController extends _$ActiveProgressController {
   Future<StepCheckResult> checkCurrentStep() async {
     final repository = ref.read(progressRepositoryProvider);
     final pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+    if (!ref.mounted) {
+      return const StepCheckResult(success: false, message: 'Операция прервана');
+    }
 
     final result = await repository.checkStep(questId, pos.latitude, pos.longitude);
+    if (!ref.mounted) {
+      return result;
+    }
 
     if (result.success) {
       final progress = await repository.getProgress(questId);
+      if (!ref.mounted) return result;
       state = AsyncData(progress);
     }
 

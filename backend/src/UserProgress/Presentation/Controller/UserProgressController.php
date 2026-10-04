@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\UserProgress\Presentation\Controller;
 
+use App\Quest\Domain\Exception\QuestNotFoundException;
+use App\Quest\Domain\Exception\QuestStepNotFoundException;
 use App\Shared\Authentication\Trait\AuthenticationTrait;
 use App\User\Domain\Entity\User;
 use App\UserProgress\Application\Service\UserProgressService;
 use App\UserProgress\Domain\Exception\ActiveQuestExistsException;
+use App\UserProgress\Domain\Exception\ProgressNotFoundException;
 use App\UserProgress\Domain\ValueObject\QuestStatus;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -54,6 +57,29 @@ final class UserProgressController extends AbstractController
     }
 
     /**
+     * GET /api/user/progress/{questId}
+     */
+    #[Route('/{questId}', name: 'get_one', methods: ['GET'])]
+    public function getOneUserProgress(string $questId): JsonResponse
+    {
+        $user = $this->getAuthenticatedUserOr401Response();
+        if ($user instanceof JsonResponse) {
+            return $user;
+        }
+        assert($user instanceof User);
+        $userId = $user->getId();
+        $questUuid = Uuid::fromString($questId);
+
+        try {
+            $progress = $this->progressService->getUserProgressByQuestId($userId, $questUuid);
+        } catch (ProgressNotFoundException) {
+            return $this->json(['error' => 'Progress not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        return $this->json($progress);
+    }
+
+    /**
      * Start a quest
      * 
      * POST /api/user/progress/{questId}/start
@@ -72,13 +98,19 @@ final class UserProgressController extends AbstractController
 
         try {
             $progress = $this->progressService->startQuest($userId, $questUuid);
+        } catch (QuestNotFoundException) {
+            return $this->json(['error' => 'Quest not found'], Response::HTTP_NOT_FOUND);
+        } catch (QuestStepNotFoundException $e) {
+            return $this->json(['error' => $e->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
         } catch (ActiveQuestExistsException) {
             return $this->json(['error' => 'User already has an active quest. Pause it before starting a new one.'], Response::HTTP_CONFLICT);
         }
 
+        $progressData = $this->progressService->getUserProgressByQuestId($userId, $questUuid);
+
         return $this->json([
             'message' => 'Quest started successfully',
-            'data' => $progress->toArray(),
+            'data' => $progressData,
         ], Response::HTTP_CREATED);
     }
 
@@ -99,11 +131,12 @@ final class UserProgressController extends AbstractController
         $userId = $user->getId();
         $questUuid = Uuid::fromString($questId);
 
-        $progress = $this->progressService->pauseQuest($userId, $questUuid);
+        $this->progressService->pauseQuest($userId, $questUuid);
+        $progressData = $this->progressService->getUserProgressByQuestId($userId, $questUuid);
 
         return $this->json([
             'message' => 'Quest paused successfully',
-            'data' => $progress->toArray(),
+            'data' => $progressData,
         ]);
     }
 
@@ -124,11 +157,12 @@ final class UserProgressController extends AbstractController
         $userId = $user->getId();
         $questUuid = Uuid::fromString($questId);
 
-        $progress = $this->progressService->completeQuest($userId, $questUuid);
+        $this->progressService->completeQuest($userId, $questUuid);
+        $progressData = $this->progressService->getUserProgressByQuestId($userId, $questUuid);
 
         return $this->json([
             'message' => 'Quest completed successfully',
-            'data' => $progress->toArray(),
+            'data' => $progressData,
         ]);
     }
 

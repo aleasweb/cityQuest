@@ -65,7 +65,7 @@ final class UserProgressService
         
         $firstStep = $this->questStepRepository->findFirstActiveByQuest($questId);
         if ($firstStep === null) {
-            throw QuestStepNotFoundException::withQuestStepAndNumber($questId, 0);
+            throw QuestStepNotFoundException::withNoActiveStepsForQuest($questId);
         }
         $progress->setCurrentStepNumber($firstStep->getNumber());
 
@@ -148,6 +148,8 @@ final class UserProgressService
                 'startedAt' => $progress->getCreatedAt()->format('Y-m-d H:i:s'),
                 'updatedAt' => $progress->getUpdatedAt()->format('Y-m-d H:i:s'),
                 'isLiked' => $likedMap[$questIdString] ?? false,
+                'currentStepNumber' => $progress->getCurrentStepNumber() ?? 0,
+                'totalSteps' => $this->questStepRepository->countActiveByQuest($progress->getQuestId()),
             ];
 
             // Include quest details if quest exists
@@ -174,6 +176,40 @@ final class UserProgressService
             'data' => $data,
             'meta' => $meta,
         ];
+    }
+
+    /**
+     * @throws ProgressNotFoundException
+     */
+    public function getUserProgressByQuestId(Uuid $userId, Uuid $questId): array
+    {
+        $progress = $this->progressRepository->findByUserIdAndQuestId($userId, $questId);
+        
+        if ($progress === null) {
+            throw ProgressNotFoundException::forUserAndQuest($userId, $questId);
+        }
+
+        $quest = $this->questRepository->findById($questId);
+        $questIdString = $questId->toRfc4122();
+        
+        $likedMap = $this->questLikeService->getLikedStatusMap($userId, [$questId]);
+
+        $progressData = [
+            'questId' => $questIdString,
+            'status' => $progress->getStatus()->value,
+            'completedAt' => $progress->getCompletedAt()?->format('Y-m-d H:i:s'),
+            'startedAt' => $progress->getCreatedAt()->format('Y-m-d H:i:s'),
+            'updatedAt' => $progress->getUpdatedAt()->format('Y-m-d H:i:s'),
+            'isLiked' => $likedMap[$questIdString] ?? false,
+            'currentStepNumber' => $progress->getCurrentStepNumber() ?? 0,
+            'totalSteps' => $this->questStepRepository->countActiveByQuest($questId),
+        ];
+
+        if ($quest !== null) {
+            $progressData['quest'] = $quest->toArray();
+        }
+
+        return $progressData;
     }
 
 
@@ -261,6 +297,7 @@ final class UserProgressService
         return [
             'success' => true,
             'nextStepNumber' => $nextStep?->getNumber(),
+            'isQuestCompleted' => $isLastStep,
             'distance' => $distance,
         ];
     }

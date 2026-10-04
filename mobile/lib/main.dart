@@ -19,6 +19,9 @@ import 'package:mobile/app/features/progress/data/repository/progress_repository
 import 'package:mobile/app/features/quests/application/quest_controller.dart';
 import 'package:mobile/app/features/quests/data/api/quest_api.dart';
 import 'package:mobile/app/features/quests/data/repository/quest_repository_impl.dart';
+import 'package:mobile/app/features/quest_process/application/quest_process_controller.dart';
+import 'package:mobile/app/features/quest_process/data/api/quest_process_api.dart';
+import 'package:mobile/app/features/quest_process/data/repository/quest_process_repository_impl.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,6 +38,7 @@ void main() async {
         profileRepositoryProvider.overrideWithValue(ProfileRepositoryImpl(ProfileApi(apiClient))),
         progressRepositoryProvider.overrideWithValue(ProgressRepositoryImpl(ProgressApi(apiClient))),
         questRepositoryProvider.overrideWithValue(QuestRepositoryImpl(QuestApi(apiClient))),
+        questProcessRepositoryProvider.overrideWithValue(QuestProcessRepositoryImpl(QuestProcessApi(apiClient))),
       ],
       child: const CityQuestApp(),
     ),

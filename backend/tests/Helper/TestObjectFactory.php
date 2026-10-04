@@ -31,7 +31,8 @@ class TestObjectFactory
         ?int $likesCount = null,
         ?bool $isPopular = null,
         ?float $latitude = null,
-        ?float $longitude = null
+        ?float $longitude = null,
+        bool $withDefaultStep = true
     ): Quest {
         $quest = new Quest($title);
         
@@ -72,16 +73,17 @@ class TestObjectFactory
         $entityManager->persist($quest);
         $entityManager->flush();
 
-        // Create a default step for testing purposes so that quests can be started
-        $step = new QuestStep(
-            questId: $quest->getId(),
-            number: 0,
-            lat: 55.7558,
-            lng: 37.6173,
-            radius: 50
-        );
-        $entityManager->persist($step);
-        $entityManager->flush();
+        if ($withDefaultStep) {
+            $step = new QuestStep(
+                questId: $quest->getId(),
+                number: 1,
+                lat: 55.7558,
+                lng: 37.6173,
+                radius: 50
+            );
+            $entityManager->persist($step);
+            $entityManager->flush();
+        }
 
         return $quest;
     }
@@ -119,8 +121,11 @@ class TestObjectFactory
         array $roles = ['ROLE_USER']
     ): User {
         $user = new User();
-        $user->setUsername($username);
-        $user->setEmail($email ?? $username . '@test.com');
+        $uniqueUsername = $username . '_' . uniqid();
+        $user->setUsername($uniqueUsername); // We need the exact username for TestAuthClient to work
+        // Generate unique email for user
+        $uniqueEmail = $email ?? $uniqueUsername . '@test.com';
+        $user->setEmail($uniqueEmail);
         $user->setPassword(password_hash($password, PASSWORD_BCRYPT));
         $user->setRoles($roles);
 
@@ -142,8 +147,11 @@ class TestObjectFactory
         array $roles = ['ROLE_USER']
     ): User {
         $user = new User();
-        $user->setUsername($username);
-        $user->setEmail($email ?? $username . '@test.com');
+        $uniqueUsername = $username . '_' . uniqid();
+        $user->setUsername($uniqueUsername); // We need the exact username for TestAuthClient to work
+        // Generate unique email for user
+        $uniqueEmail = $email ?? $uniqueUsername . '@test.com';
+        $user->setEmail($uniqueEmail);
         $user->setRoles($roles);
 
         $hashedPassword = $passwordHasher->hashPassword($user, $password);

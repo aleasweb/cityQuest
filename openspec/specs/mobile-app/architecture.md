@@ -74,8 +74,8 @@ mobile/
 |---|---|
 | `POST /api/auth/login/register/logout`, `GET /api/auth/me` | Feature `auth` (cookies + fallback Bearer) |
 | `GET /api/quests`, `/api/quests/nearby`, `/api/quests/{id}`, `/like` | Feature `quests` |
-| `GET /api/quests/{questId}/steps/{stepNumber}` | Feature `progress` (данные чекпоинтов) |
-| `GET/POST/PATCH/DELETE /api/user/progress...` | Feature `progress` (движок жизненного цикла) |
+| `GET /api/quests/{questId}/steps/{stepNumber}` | Feature `quest_process` (данные чекпоинтов) |
+| `GET/POST/PATCH/DELETE /api/user/progress...` | Feature `progress` (движок жизненного цикла) и `quest_process` (check) |
 | `GET /api/cities` | Feature `cities` (CacheManager TTL 1ч) |
 | `GET/PATCH /api/user/profile`, `GET /api/users/{username}` | Feature `profile` |
 
