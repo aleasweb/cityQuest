@@ -14,6 +14,10 @@ import 'package:mobile/app/features/quests/application/quest_controller.dart';
 import 'package:mobile/app/features/quests/domain/quest_difficulty.dart';
 import 'package:mobile/app/core/router/app_router.dart';
 
+import 'package:mobile/app/core/design_system/widgets/active_quest_block.dart';
+import 'package:mobile/app/features/progress/application/progress_controller.dart';
+import 'package:mobile/app/features/quests/domain/quest.dart';
+
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -22,8 +26,10 @@ class HomeScreen extends ConsumerWidget {
     final questsState = ref.watch(questsListControllerProvider);
     final filters = ref.watch(questFiltersStateProvider);
     final citiesState = ref.watch(citiesControllerProvider);
+    final progressListState = ref.watch(progressListControllerProvider);
 
     String cityLabel = 'Любой город';
+
     if (filters.city != null && citiesState.hasValue) {
       final selectedCity = citiesState.value!.where((c) => c.id == filters.city).firstOrNull;
       if (selectedCity != null) {
@@ -36,11 +42,37 @@ class HomeScreen extends ConsumerWidget {
       appBar: const AppTopBar(),
       body: Column(
         children: [
+          // Active quest block
+          progressListState.when(
+            data: (progressList) {
+              final activeProgress = progressList.where((p) => p.status == 'active' || p.status == 'ACTIVE').firstOrNull;
+              if (activeProgress == null) return const SizedBox.shrink();
+              
+              // Find the quest details to display the name and image
+              final quest = questsState.value?.where((q) => q.id == activeProgress.questId).firstOrNull;
+              
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(AppSpacing.s24, AppSpacing.s16, AppSpacing.s24, 0),
+                child: ActiveQuestBlock(
+                  questName: quest?.title ?? 'Активный квест',
+                  currentStep: activeProgress.currentStepNumber,
+                  totalSteps: activeProgress.totalSteps,
+                  imageUrl: quest?.imageUrl,
+                  onTap: () => context.push(AppRoutes.questProcess.replaceAll(':id', activeProgress.questId)),
+                ),
+              );
+            },
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+          ),
+
           // Filters are pinned at the top
           Container(
+
             color: AppColors.backgroundLight,
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.s16),
             child: AppFiltersRow(
+
               filters: [
                 AppFilterChip(
                   label: cityLabel,

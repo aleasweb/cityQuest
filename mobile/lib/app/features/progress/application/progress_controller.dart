@@ -94,3 +94,29 @@ class ActiveProgressController extends _$ActiveProgressController {
     return result;
   }
 }
+
+@riverpod
+class ProgressListController extends _$ProgressListController {
+  @override
+  FutureOr<List<Progress>> build() async {
+    final repository = ref.read(progressRepositoryProvider);
+    try {
+      return await repository.getList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<void> refresh() async {
+    state = const AsyncLoading();
+    try {
+      final repository = ref.read(progressRepositoryProvider);
+      final list = await repository.getList();
+      if (!ref.mounted) return;
+      state = AsyncData(list);
+    } catch (e, st) {
+      if (!ref.mounted) return;
+      state = AsyncError(e, st);
+    }
+  }
+}
