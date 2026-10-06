@@ -19,12 +19,17 @@ class ProgressApi {
 
   Future<ProgressDto> start(String questId) async {
     final response = await _apiClient.client.post('/api/user/progress/$questId/start');
-    return ProgressDto.fromJson(response.data as Map<String, dynamic>);
+    final parsed = _tryParseProgress(response.data);
+    if (parsed != null) return parsed;
+    // Сервер уже перевёл квест в active — дочитываем прогресс, если формат ответа неожиданный
+    return getProgress(questId);
   }
 
   Future<ProgressDto> pause(String questId) async {
-    final response = await _apiClient.client.post('/api/user/progress/$questId/pause');
-    return ProgressDto.fromJson(response.data as Map<String, dynamic>);
+    final response = await _apiClient.client.patch('/api/user/progress/$questId/pause');
+    final parsed = _tryParseProgress(response.data);
+    if (parsed != null) return parsed;
+    return getProgress(questId);
   }
 
   Future<void> abandon(String questId) async {
@@ -37,5 +42,19 @@ class ProgressApi {
       'lng': lng,
     });
     return StepCheckResponseDto.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  ProgressDto? _tryParseProgress(dynamic raw) {
+    if (raw is! Map) return null;
+    final map = Map<String, dynamic>.from(raw);
+    final payload = map.containsKey('questId')
+        ? map
+        : (map['data'] is Map ? Map<String, dynamic>.from(map['data'] as Map) : null);
+    if (payload == null || payload['questId'] is! String) return null;
+    try {
+      return ProgressDto.fromJson(payload);
+    } catch (_) {
+      return null;
+    }
   }
 }
