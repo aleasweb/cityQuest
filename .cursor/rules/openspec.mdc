@@ -8,7 +8,7 @@ globs: openspec/**/*, .cursor/skills/**/*
 При планировании (`/opsx-propose`) и реализации (`/opsx-apply`) изменений вы обязаны:
 
 1. **Обновление архитектуры:** В генерируемом `tasks.md` всегда создавать отдельную задачу на обновление глобальной архитектурной документации по домену (`openspec/specs/<domain>/architecture.md`).
-2. **Связь тестов со спецификациями:** В `tasks.md` всегда добавлять задачу на простановку ссылок на новые тесты в дельта-спецификации.
+2. **Связь тестов со спецификациями (только backend/frontend):** В `tasks.md` добавлять задачу на простановку ссылок на новые тесты в дельта-спецификации. Для **Flutter / mobile** эту задачу **не** создавать и блоки `**TESTS**` в delta-specs не добавлять.
    Пример генерации задач:
    ```markdown
    ## Documentation Sync
@@ -25,3 +25,4 @@ globs: openspec/**/*, .cursor/skills/**/*
       - Backend: `ProfileControllerTest::testUnauthorizedAccess`
       - Frontend: `auth.cy.ts`
    ```
+4. **Flutter:** тесты (unit / widget / integration) **не писать**. Не добавлять задачи на Flutter-тесты в `tasks.md` и не ссылаться на них в OpenSpec.

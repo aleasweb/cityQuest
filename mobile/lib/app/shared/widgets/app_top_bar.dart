@@ -15,89 +15,117 @@ class AppTopBar extends ConsumerWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authControllerProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.s24,
-          vertical: AppSpacing.s12,
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (Navigator.of(context).canPop())
-                  Padding(
-                    padding: const EdgeInsets.only(right: AppSpacing.s12),
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_back),
-                      color: AppColors.primary,
-                      onPressed: () => Navigator.of(context).pop(),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-                  ),
-                Image.asset(
-                  'assets/images/logo.png',
-                  height: 36,
-                  fit: BoxFit.contain,
-                ),
-              ],
+    return Material(
+      color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+      elevation: 0,
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+          border: Border(
+            bottom: BorderSide(
+              color: isDark ? AppColors.borderDark : AppColors.borderLight,
             ),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (actions != null) ...[
-                  ...actions!,
-                  const SizedBox(width: AppSpacing.s12),
-                ],
-                authState.maybeWhen(
-                  data: (user) {
-                if (user != null) {
-                  return GestureDetector(
-                    onTap: () => context.push(AppRoutes.profile),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          user.username,
-                          style: AppTextStyles.h2.copyWith(
-                            fontSize: 18,
-                            color: AppColors.premiumTeal,
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.s12),
-                        CircleAvatar(
-                          radius: 20,
-                          backgroundColor: AppColors.primaryLight,
-                          child: Text(
-                            user.username.isNotEmpty ? user.username[0].toUpperCase() : '?',
-                            style: AppTextStyles.h3.copyWith(color: AppColors.primary),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-                return TextButton(
-                  onPressed: () => context.push(AppRoutes.login),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    textStyle: AppTextStyles.button,
-                  ),
-                  child: const Text('Войти'),
-                );
-              },
-              orElse: () => const SizedBox(width: 40, height: 40),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.06),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
-      ],
-    ),
-  ),
-);
+        child: SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.s24,
+              vertical: AppSpacing.s12,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (Navigator.of(context).canPop())
+                      Padding(
+                        padding: const EdgeInsets.only(right: AppSpacing.s12),
+                        child: IconButton(
+                          icon: const Icon(Icons.arrow_back),
+                          color: AppColors.primary,
+                          onPressed: () => Navigator.of(context).pop(),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ),
+                    GestureDetector(
+                      onTap: () => context.go(AppRoutes.home),
+                      child: Image.asset(
+                        'assets/images/logo.png',
+                        height: 36,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ],
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (actions != null) ...[
+                      ...actions!,
+                      const SizedBox(width: AppSpacing.s12),
+                    ],
+                    authState.maybeWhen(
+                      data: (user) {
+                        if (user != null) {
+                          return GestureDetector(
+                            onTap: () => context.push(AppRoutes.profile),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  user.username,
+                                  style: AppTextStyles.h2.copyWith(
+                                    fontSize: 18,
+                                    color: AppColors.premiumTeal,
+                                  ),
+                                ),
+                                const SizedBox(width: AppSpacing.s12),
+                                CircleAvatar(
+                                  radius: 20,
+                                  backgroundColor: AppColors.primaryLight,
+                                  child: Text(
+                                    user.username.isNotEmpty
+                                        ? user.username[0].toUpperCase()
+                                        : '?',
+                                    style: AppTextStyles.h3.copyWith(color: AppColors.primary),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+                        return TextButton(
+                          onPressed: () => context.push(AppRoutes.login),
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.primary,
+                            textStyle: AppTextStyles.button,
+                          ),
+                          child: const Text('Войти'),
+                        );
+                      },
+                      orElse: () => const SizedBox(width: 40, height: 40),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override

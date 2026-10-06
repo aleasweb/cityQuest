@@ -2,11 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile/app/core/design/app_colors.dart';
+import 'package:mobile/app/core/design/app_spacing.dart';
 import 'package:mobile/app/core/design/app_text_styles.dart';
-import 'package:mobile/app/shared/widgets/error_state.dart';
-import 'package:mobile/app/shared/widgets/app_top_bar.dart';
+import 'package:mobile/app/core/design_system/widgets/active_quest_block.dart';
+import 'package:mobile/app/core/design_system/widgets/paused_quest_block.dart';
+import 'package:mobile/app/core/router/app_router.dart';
 import 'package:mobile/app/features/profile/application/profile_controller.dart';
 import 'package:mobile/app/features/profile/domain/profile.dart';
+import 'package:mobile/app/features/progress/application/progress_controller.dart';
+import 'package:mobile/app/features/quest_process/application/quest_process_controller.dart';
+import 'package:mobile/app/shared/widgets/app_top_bar.dart';
+import 'package:mobile/app/shared/widgets/error_state.dart';
+import 'package:mobile/app/shared/widgets/toast.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -36,14 +43,70 @@ class _ProfileContent extends ConsumerWidget {
 
   const _ProfileContent({required this.profile});
 
+  Future<void> _resumePausedQuest(BuildContext context, WidgetRef ref, String questId) async {
+    try {
+      final progress = await ref.read(progressRepositoryProvider).start(questId);
+      if (progress.status != 'active' && progress.status != 'ACTIVE') {
+        throw Exception('Не удалось возобновить квест');
+      }
+
+      ref.invalidate(progressListControllerProvider);
+      ref.invalidate(questProcessControllerProvider(questId));
+      ref.invalidate(profileControllerProvider);
+      await ref.read(profileControllerProvider.future);
+
+      if (!context.mounted) return;
+      context.push(AppRoutes.questProcess.replaceAll(':id', questId));
+    } catch (e) {
+      ref.invalidate(profileControllerProvider);
+      ref.invalidate(progressListControllerProvider);
+      if (!context.mounted) return;
+      Toast.show(context, e.toString(), isError: true);
+    }
+  }
+
+  Future<void> _abandonPausedQuest(BuildContext context, WidgetRef ref, QuestHistoryItem quest) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Отказаться от квеста?'),
+        content: Text('Прогресс «${quest.title}» будет удалён.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: const Text('Отказаться'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await ref.read(progressRepositoryProvider).abandon(quest.questId);
+      ref.invalidate(profileControllerProvider);
+      ref.invalidate(progressListControllerProvider);
+    } catch (e) {
+      if (!context.mounted) return;
+      Toast.show(context, e.toString(), isError: true);
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final activeQuest = profile.activeQuest;
+    final hasActive = activeQuest != null;
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s20, vertical: AppSpacing.s8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Avatar
           Center(
             child: Container(
               width: 88,
@@ -55,16 +118,14 @@ class _ProfileContent extends ConsumerWidget {
               child: const Icon(Icons.person_outline, size: 48, color: Colors.white),
             ),
           ),
-          const SizedBox(height: 16),
-          
-          // Name and Email
+          const SizedBox(height: AppSpacing.s16),
           Center(
             child: Text(
               profile.username,
               style: AppTextStyles.h2.copyWith(color: AppColors.textLight),
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: AppSpacing.s4),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -72,67 +133,91 @@ class _ProfileContent extends ConsumerWidget {
                 profile.email,
                 style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondaryLight),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.s8),
               GestureDetector(
-                onTap: () {
-                  // Edit profile action
-                },
+                onTap: () {},
                 child: const Icon(Icons.edit_outlined, size: 16, color: AppColors.textSecondaryLight),
               ),
             ],
           ),
-          const SizedBox(height: 24),
-
-          // Stats
+          const SizedBox(height: AppSpacing.s24),
           Row(
             children: [
               Expanded(child: _StatCard(count: profile.completedQuests.length.toString(), label: 'Пройдено')),
-              const SizedBox(width: 12),
-              Expanded(child: _StatCard(count: (profile.activeQuest != null ? 1 : 0).toString(), label: 'В процессе')),
-              const SizedBox(width: 12),
+              const SizedBox(width: AppSpacing.s12),
+              Expanded(child: _StatCard(count: (hasActive ? 1 : 0).toString(), label: 'В процессе')),
+              const SizedBox(width: AppSpacing.s12),
               Expanded(child: _StatCard(count: profile.pausedQuests.length.toString(), label: 'На паузе')),
             ],
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: AppSpacing.s32),
 
-          // Active Quest
-          if (profile.activeQuest != null) ...[
-            Text('Продолжить прохождение', style: AppTextStyles.h3.copyWith(color: AppColors.textLight)),
-            const SizedBox(height: 16),
-            _ActiveQuestCard(quest: profile.activeQuest!),
-            const SizedBox(height: 32),
-          ],
+          // Active quest section — always visible
+          Text('Активный квест', style: AppTextStyles.h3.copyWith(color: AppColors.textLight)),
+          const SizedBox(height: AppSpacing.s16),
+          if (hasActive)
+            ActiveQuestBlock(
+              questName: activeQuest.title,
+              currentStep: activeQuest.currentStepNumber ?? 1,
+              totalSteps: (activeQuest.totalSteps != null && activeQuest.totalSteps! > 0)
+                  ? activeQuest.totalSteps!
+                  : 1,
+              imageUrl: activeQuest.imageUrl,
+              onTap: () => context.push(
+                AppRoutes.questProcess.replaceAll(':id', activeQuest.questId),
+              ),
+            )
+          else
+            Text(
+              'Нет активных квестов',
+              style: AppTextStyles.body.copyWith(color: AppColors.textSecondaryLight),
+            ),
+          const SizedBox(height: AppSpacing.s32),
 
-          // Paused Quests
+          // Paused quests
           if (profile.pausedQuests.isNotEmpty) ...[
             Text('Квесты на паузе', style: AppTextStyles.h3.copyWith(color: AppColors.textLight)),
-            const SizedBox(height: 16),
-            ...profile.pausedQuests.map((q) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _PausedQuestCard(quest: q),
-            )),
-            const SizedBox(height: 32),
+            const SizedBox(height: AppSpacing.s16),
+            ...profile.pausedQuests.map(
+              (q) => Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.s12),
+                child: PausedQuestBlock(
+                  questName: q.title,
+                  currentStep: q.currentStepNumber ?? 1,
+                  totalSteps: (q.totalSteps != null && q.totalSteps! > 0) ? q.totalSteps! : 1,
+                  imageUrl: q.imageUrl,
+                  onContinue: hasActive
+                      ? null
+                      : () => _resumePausedQuest(context, ref, q.questId),
+                  onAbandon: () => _abandonPausedQuest(context, ref, q),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.s32),
           ],
 
-          // Bottom Menu
           Container(
             decoration: BoxDecoration(
               color: AppColors.surfaceLight,
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
             ),
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.s8),
             child: Column(
               children: [
-                _MenuTile(
-                  title: 'Настройки',
-                  onTap: () {},
+                _MenuTile(title: 'Настройки', onTap: () {}),
+                const Divider(
+                  height: 1,
+                  color: AppColors.borderLight,
+                  indent: AppSpacing.s16,
+                  endIndent: AppSpacing.s16,
                 ),
-                const Divider(height: 1, color: AppColors.borderLight, indent: 16, endIndent: 16),
-                _MenuTile(
-                  title: 'Помощь и поддержка',
-                  onTap: () {},
+                _MenuTile(title: 'Помощь и поддержка', onTap: () {}),
+                const Divider(
+                  height: 1,
+                  color: AppColors.borderLight,
+                  indent: AppSpacing.s16,
+                  endIndent: AppSpacing.s16,
                 ),
-                const Divider(height: 1, color: AppColors.borderLight, indent: 16, endIndent: 16),
                 _MenuTile(
                   title: 'Выйти',
                   textColor: AppColors.error,
@@ -144,7 +229,7 @@ class _ProfileContent extends ConsumerWidget {
               ],
             ),
           ),
-          const SizedBox(height: 40),
+          const SizedBox(height: AppSpacing.s40),
         ],
       ),
     );
@@ -160,10 +245,10 @@ class _StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.s16, horizontal: AppSpacing.s8),
       decoration: BoxDecoration(
         color: AppColors.surfaceLight,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
       ),
       child: Column(
         children: [
@@ -171,159 +256,15 @@ class _StatCard extends StatelessWidget {
             count,
             style: AppTextStyles.h2.copyWith(color: AppColors.textLight),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: AppSpacing.s4),
           Text(
             label,
             style: AppTextStyles.bodySmall.copyWith(
               color: AppColors.textSecondaryLight,
-              fontSize: 12,
             ),
             textAlign: TextAlign.center,
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _ActiveQuestCard extends StatelessWidget {
-  final QuestHistoryItem quest;
-
-  const _ActiveQuestCard({required this.quest});
-
-  @override
-  Widget build(BuildContext context) {
-    final stepText = (quest.currentStepNumber != null && quest.totalSteps != null)
-        ? 'Этап ${quest.currentStepNumber} из ${quest.totalSteps}'
-        : 'В процессе';
-
-    final progress = (quest.currentStepNumber != null && quest.totalSteps != null && quest.totalSteps! > 0)
-        ? (quest.currentStepNumber! / quest.totalSteps!)
-        : 0.0;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceLight,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: quest.imageUrl != null
-                ? Image.network(quest.imageUrl!, width: 100, height: 100, fit: BoxFit.cover)
-                : Container(
-                    width: 100,
-                    height: 100,
-                    color: AppColors.borderLight,
-                    child: const Icon(Icons.image, color: AppColors.textSecondaryLight),
-                  ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  quest.title,
-                  style: AppTextStyles.h3.copyWith(color: AppColors.textLight),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  stepText,
-                  style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondaryLight),
-                ),
-                const SizedBox(height: 8),
-                if (quest.currentStepNumber != null) ...[
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: progress,
-                      backgroundColor: AppColors.borderLight,
-                      color: AppColors.primary,
-                      minHeight: 6,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                ElevatedButton(
-                  onPressed: () {
-                    context.push('/quest/${quest.questId}');
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                    minimumSize: const Size(0, 36),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                  ),
-                  child: const Text('Продолжить', style: TextStyle(fontWeight: FontWeight.w600)),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PausedQuestCard extends StatelessWidget {
-  final QuestHistoryItem quest;
-
-  const _PausedQuestCard({required this.quest});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => context.push('/quest/${quest.questId}'),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceLight,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: quest.imageUrl != null
-                  ? Image.network(quest.imageUrl!, width: 72, height: 72, fit: BoxFit.cover)
-                  : Container(
-                      width: 72,
-                      height: 72,
-                      color: AppColors.borderLight,
-                      child: const Icon(Icons.image, color: AppColors.textSecondaryLight),
-                    ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    quest.title,
-                    style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w600, color: AppColors.textLight),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    quest.city ?? 'Неизвестно',
-                    style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondaryLight),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -347,7 +288,7 @@ class _MenuTile extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.s16, horizontal: AppSpacing.s16),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [

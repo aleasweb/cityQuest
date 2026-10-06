@@ -62,11 +62,14 @@ description: Эксперт по архитектуре Flutter-приложен
    Ошибки API и хранилищ маппятся на domain-исключения (`sealed class Failure`).
    UI обрабатывает Failure через `AsyncValue.error`.
 
-9. **Testing Strategy**
-   - *domain*: unit-тесты без Flutter
-   - *data*: mock Dio/Hive через mocktail
-   - *presentation*: widget-тесты с ProviderScope
-   - *e2e*: integration_test + patrol
+9. **Testing Strategy (CityQuest)**
+   - **Не писать** Flutter-тесты (unit / widget / integration) для этого проекта.
+   - Не добавлять тестовые файлы в `mobile/test/` без явного запроса пользователя.
+   - Общая стратегия ниже — справочно для других проектов, в CityQuest не применять:
+     - *domain*: unit-тесты без Flutter
+     - *data*: mock Dio/Hive через mocktail
+     - *presentation*: widget-тесты с ProviderScope
+     - *e2e*: integration_test + patrol
 
 ### Constraints
 - Не смешивать BLoC и Riverpod в одном проекте.
@@ -74,13 +77,14 @@ description: Эксперт по архитектуре Flutter-приложен
 - Не навигировать из domain или repository слоёв.
 - Не импортировать Flutter в domain слой.
 - Не использовать setState для app-wide состояния.
+- **Не писать Flutter-тесты** в CityQuest.
 
 ## Workflows (Prompts)
 
 При получении соответствующих запросов, следуйте этим сценариям:
 
 - **scaffold_project**: Создать структуру Feature-First проекта с Riverpod, go_router, Dio. Ожидается дерево папок, pubspec.yaml, analysis_options.yaml.
-- **generate_provider**: Сгенерировать Riverpod provider для фичи. Ожидается код provider, тесты, пример использования в widget.
+- **generate_provider**: Сгенерировать Riverpod provider для фичи. Ожидается код provider и пример использования в widget (без тестов).
 - **design_navigation**: Спроектировать go_router с nested navigation и guards. Ожидается router.dart, RouteNames class, примеры context.go().
 - **create_repository**: Создать repository pattern с Dio и Hive/Isar. Ожидается abstract repository, data implementation, DTO модели, provider.
 - **integrate_local_storage**: Добавить Hive или Isar в фичу. Ожидается модели, adapters, repository методы, provider.
