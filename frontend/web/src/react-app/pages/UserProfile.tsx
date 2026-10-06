@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '@/react-app/contexts/AuthContext';
 import Header from '@/react-app/components/Header';
-import { User, MapPin, Heart, Clock, Pause, CheckCircle2, Loader2 } from 'lucide-react';
+import { User, MapPin, Heart, Clock, Pause, PauseCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { api } from '@/shared/api';
 import type { UserProfileWithHistory, QuestProgressItem } from '@/shared/types';
 
@@ -102,14 +102,12 @@ export default function UserProfile() {
 
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
             <div className="flex items-center space-x-3">
-              <Heart className="w-8 h-8 text-red-500" />
+              <PauseCircle className="w-8 h-8 text-orange-500" />
               <div>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {(profileData?.completedQuests.filter(q => q.isLiked).length || 0) +
-                   (profileData?.pausedQuests.filter(q => q.isLiked).length || 0) +
-                   (profileData?.activeQuest?.isLiked ? 1 : 0)}
+                  {profileData?.pausedQuests?.length || 0}
                 </p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Понравилось</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">На паузе</p>
               </div>
             </div>
           </div>

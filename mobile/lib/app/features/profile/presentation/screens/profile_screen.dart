@@ -90,7 +90,7 @@ class _ProfileContent extends ConsumerWidget {
               const SizedBox(width: 12),
               Expanded(child: _StatCard(count: (profile.activeQuest != null ? 1 : 0).toString(), label: 'В процессе')),
               const SizedBox(width: 12),
-              const Expanded(child: _StatCard(count: '0', label: 'В избранном')),
+              Expanded(child: _StatCard(count: profile.pausedQuests.length.toString(), label: 'На паузе')),
             ],
           ),
           const SizedBox(height: 32),
